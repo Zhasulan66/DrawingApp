@@ -2,6 +2,8 @@ package com.example.drawingapp2.gesture
 
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.calculateRotation
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.ui.Modifier
@@ -77,6 +79,8 @@ suspend fun AwaitPointerEventScope.awaitDragMotionEvent(
             change.consumePositionChange()
         }
 
+
+
     if (change != null) {
         // 🔥 Calls  awaitDragOrCancellation(pointer) in a while loop
         drag(change.id) { pointerInputChange: PointerInputChange ->
@@ -95,7 +99,8 @@ suspend fun AwaitPointerEventScope.awaitDragMotionEvent(
 fun Modifier.dragMotionEvent(
     onDragStart: (PointerInputChange) -> Unit = {},
     onDrag: (PointerInputChange) -> Unit = {},
-    onDragEnd: (PointerInputChange) -> Unit = {}
+    onDragEnd: (PointerInputChange) -> Unit = {},
+    //onTranslate: (zoom: Float, rotation: Float) -> Unit
 ) = this.then(
     Modifier.pointerInput(Unit) {
         forEachGesture {
@@ -103,5 +108,7 @@ fun Modifier.dragMotionEvent(
                 awaitDragMotionEvent(onDragStart, onDrag, onDragEnd)
             }
         }
+
+
     }
 )

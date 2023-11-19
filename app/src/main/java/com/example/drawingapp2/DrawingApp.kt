@@ -1,23 +1,24 @@
 package com.example.drawingapp2
 
 import android.graphics.Paint
-import android.widget.Toast
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
@@ -25,18 +26,27 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.consumePositionChange
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.drawingapp2.gesture.MotionEvent
 import com.example.drawingapp2.gesture.dragMotionEvent
 import com.example.drawingapp2.menu.DrawingPropertiesMenu
 import com.example.drawingapp2.model.PathProperties
-import com.example.drawingapp2.ui.theme.Purple200
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 @Composable
 fun DrawingApp() {
@@ -47,7 +57,7 @@ fun DrawingApp() {
      * Paths that are added, this is required to have paths with different options and paths
      *  ith erase to keep over each other
      */
-    val paths = remember { mutableStateListOf<Pair<Path, PathProperties>>() }
+    var paths = remember { mutableStateListOf<Pair<Path, PathProperties>>() }
 
     /**
      * Paths that are undone via button. These paths are restored if user pushes
@@ -56,7 +66,7 @@ fun DrawingApp() {
      * If new path is drawn after this list is cleared to not break paths after undoing previous
      * ones.
      */
-    val pathsUndone = remember { mutableStateListOf<Pair<Path, PathProperties>>() }
+    var pathsUndone = remember { mutableStateListOf<Pair<Path, PathProperties>>() }
 
     /**
      * Canvas touch state. [MotionEvent.Idle] by default, [MotionEvent.Down] at first contact,
@@ -94,6 +104,8 @@ fun DrawingApp() {
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
     var bgType by remember { mutableStateOf(0) }
+    var tableRowSize by remember { mutableStateOf( 0) }
+    var tableColumnSize by remember { mutableStateOf( 0) }
 
     val canvasText = remember { StringBuilder() }
     val paint = remember {
@@ -103,18 +115,81 @@ fun DrawingApp() {
         }
     }
 
-    Column(
+    var scale by remember { mutableStateOf(1f) }
+    var myRotation by remember { mutableStateOf(0f) }
+
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color.Transparent)
+
     ) {
 
-        val drawModifier = Modifier
-            .padding(8.dp)
-            .shadow(1.dp)
-            .fillMaxWidth()
-            .weight(1f)
+        var lines by remember { mutableStateOf(listOf<Pair<Float, Float>>()) }
+        var lines2 by remember { mutableStateOf(listOf<Pair<Float, Float>>()) }
+
+        val distanceBetweenLines = 30.dp
+
+        Canvas(modifier = Modifier
             .background(currentBackgroundColor)
+            .fillMaxSize()
+        ){
+            val screenSize = size
+            val numberOfHorizontalLines =
+                (screenSize.height / distanceBetweenLines.toPx()).toInt()
+            val numberOfVerticalLines = (screenSize.width / distanceBetweenLines.toPx()).toInt()
+
+
+            when (bgType) {
+                1 -> {
+                    lines = emptyList()
+                    // Draw horizontal lines
+                    for (i in 0 until numberOfHorizontalLines) {
+                        val y = i * distanceBetweenLines.toPx()
+                        lines = lines + Pair(0f, y)
+                    }
+                }
+
+                2 -> {
+                    lines = emptyList()
+                    // Draw horizontal lines
+                    for (i in 0 until numberOfHorizontalLines) {
+                        val y = i * distanceBetweenLines.toPx()
+                        lines = lines + Pair(0f, y)
+                    }
+                    // Draw vertical lines
+                    for (i in 0 until numberOfVerticalLines) {
+                        val x = i * distanceBetweenLines.toPx()
+                        lines = lines + Pair(x, 0f)
+                    }
+                }
+
+                else -> {
+                    // Clear all lines
+                    lines = emptyList()
+                }
+            }
+
+            lines.forEach { (x, y) ->
+                drawLine(
+                    color = Color.Gray,
+                    start = Offset(x, y),
+                    end = if (x == 0f) Offset(screenSize.width, y) else Offset(
+                        x,
+                        screenSize.height
+                    ),
+                    strokeWidth = 2.dp.toPx(),
+                    cap = StrokeCap.Square
+                )
+            }
+        }
+
+        val drawModifier = Modifier
+
+            .fillMaxSize()
+            //.weight(1f)
+            .background(Color.Transparent)
 //            .background(getRandomColor())
             .dragMotionEvent(
                 onDragStart = { pointerInputChange ->
@@ -135,6 +210,7 @@ fun DrawingApp() {
                             path.translate(change)
                         }
                         currentPath.translate(change)
+
                     }
                     pointerInputChange.consumePositionChange()
 
@@ -142,54 +218,43 @@ fun DrawingApp() {
                 onDragEnd = { pointerInputChange ->
                     motionEvent = MotionEvent.Up
                     pointerInputChange.consumeDownChange()
+                },
+
+                )
+            .transformable(
+                state = rememberTransformableState { zoomChange, panChange, rotationChange ->
+                    if (drawMode == DrawMode.Touch) {
+                        scale *= zoomChange
+                        myRotation += rotationChange
+
+                    }
                 }
             )
+            .pointerInput(Unit){
+                if(drawMode == DrawMode.Touch) {
+                    detectDragGestures(
+                        onDragStart = {
 
-        var lines by remember { mutableStateOf(listOf<Pair<Float, Float>>()) }
-
-        val distanceBetweenLines = 30.dp
-
-        Canvas(modifier = drawModifier) {
-
-            val screenSize = size
-            val numberOfHorizontalLines = (screenSize.height / distanceBetweenLines.toPx()).toInt()
-            val numberOfVerticalLines = (screenSize.width / distanceBetweenLines.toPx()).toInt()
+                        },
+                        onDrag = { change, dragAmount ->
 
 
-            if(bgType == 1){
-                lines = emptyList()
-                // Draw horizontal lines
-                for (i in 0 until numberOfHorizontalLines) {
-                    val y = i * distanceBetweenLines.toPx()
-                    lines = lines + Pair(0f, y)
+                        },
+                        onDragEnd = {
+
+                        }
+                    )
                 }
             }
-            else if(bgType == 2){
-                // Draw horizontal lines
-                for (i in 0 until numberOfHorizontalLines) {
-                    val y = i * distanceBetweenLines.toPx()
-                    lines = lines + Pair(0f, y)
-                }
-                // Draw vertical lines
-                for (i in 0 until numberOfVerticalLines) {
-                    val x = i * distanceBetweenLines.toPx()
-                    lines = lines + Pair(x, 0f)
-                }
-            }
-            else {
-                // Clear all lines
-                lines = emptyList()
-            }
 
-            lines.forEach { (x, y) ->
-                drawLine(
-                    color = Color.Gray,
-                    start = Offset(x, y),
-                    end = if (x == 0f) Offset(screenSize.width, y) else Offset(x, screenSize.height),
-                    strokeWidth = 2.dp.toPx(),
-                    cap = StrokeCap.Square
-                )
-            }
+        Canvas(
+            modifier = drawModifier
+                .then(Modifier
+                    .graphicsLayer {
+                        scaleX = scale; scaleY = scale
+                        rotationZ = myRotation
+                    })
+        ) {
 
             when (motionEvent) {
 
@@ -201,6 +266,7 @@ fun DrawingApp() {
                     previousPosition = currentPosition
 
                 }
+
                 MotionEvent.Move -> {
 
                     if (drawMode != DrawMode.Touch) {
@@ -248,10 +314,39 @@ fun DrawingApp() {
                     previousPosition = currentPosition
                     motionEvent = MotionEvent.Idle
                 }
+
                 else -> Unit
             }
 
+            // Calculate offsets for centering the table
+            val centerX = (size.width) / 2 - (tableColumnSize / 2  * 100)
+            val centerY = (size.height) / 2 - (tableRowSize / 2 * 100)
+
+            //lines2 = lines2 + Pair(centerX, centerY)
+            //lines2 = lines2 + Pair(centerX + 1, centerY)
+            for (i in 0 until tableRowSize + 1) {
+                val y = i * 100f + centerY
+                lines2 = lines2 + Pair(centerX, y)
+            }
+
+            for (i in 0 until tableColumnSize + 1) {
+                val x = i * 100f + centerX
+                lines2 = lines2 + Pair(x + 1, centerY)
+            }
+
             with(drawContext.canvas.nativeCanvas) {
+                val tableColor = currentPathProperty.color
+                if (tableRowSize != 0 && tableColumnSize != 0) {
+                    lines2.forEach { (x, y) ->
+                        drawLine(
+                            color = tableColor,
+                            start = Offset(x, y),
+                            end = if (x == centerX) Offset( centerX + tableColumnSize * 100f, y) else Offset(x, centerY + tableRowSize * 100f),
+                            strokeWidth = 4.dp.toPx(),
+                            cap = StrokeCap.Square
+                        )
+                    }
+                }
 
                 val checkPoint = saveLayer(null, null)
 
@@ -337,13 +432,17 @@ fun DrawingApp() {
 //            drawText(text = canvasText.toString(), x = 0f, y = 60f, paint)
         }
 
+
+        Clock(
+            modifier = Modifier
+                .align(alignment = Alignment.TopEnd)
+                .padding(20.dp)
+        )
+
         DrawingPropertiesMenu(
             modifier = Modifier
-                .padding(bottom = 8.dp, start = 8.dp, end = 8.dp)
-                .shadow(1.dp, RoundedCornerShape(8.dp))
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(4.dp),
+                .background(currentBackgroundColor)
+                .align(alignment = Alignment.BottomCenter),
             pathProperties = currentPathProperty,
             drawMode = drawMode,
             currentBackgroundColor = currentBackgroundColor,
@@ -368,6 +467,14 @@ fun DrawingApp() {
                     paths.add(Pair(lastPath, lastPathProperty))
                 }
             },
+            onClearAll = {
+                paths.clear()
+                pathsUndone.clear()
+                // delete all lines2
+                lines2 = emptyList()
+                tableRowSize = 0
+                tableColumnSize = 0
+            },
             onPathPropertiesChange = {
                 motionEvent = MotionEvent.Idle
             },
@@ -375,20 +482,24 @@ fun DrawingApp() {
                 motionEvent = MotionEvent.Idle
                 drawMode = it
                 currentPathProperty.eraseMode = (drawMode == DrawMode.Erase)
-                Toast.makeText(
-                    context, "pathProperty: ${currentPathProperty.hashCode()}, " +
-                            "Erase Mode: ${currentPathProperty.eraseMode}", Toast.LENGTH_SHORT
-                ).show()
+                /*Toast.makeText(
+                context, "pathProperty: ${currentPathProperty.hashCode()}, " +
+                        "Erase Mode: ${currentPathProperty.eraseMode}", Toast.LENGTH_SHORT
+            ).show()*/
             },
-            onBgChanged = {
-                currentBackgroundColor = it
+            onBgChanged = { color, type ->
+                currentBackgroundColor = color
+                bgType = type
             },
-            onBgTypeChanged = {
-                bgType = it
+            onDrawTable = { rowInt, columnInt ->
+                lines2 = emptyList()
+                tableRowSize = rowInt
+                tableColumnSize = columnInt
             }
 
         )
     }
+
 }
 
 
@@ -404,39 +515,37 @@ private fun DrawScope.drawText(text: String, x: Float, y: Float, paint: Paint) {
     }
 }
 
+class ClockViewModel : ViewModel() {
+    private val _currentTime = mutableStateOf(getCurrentTime())
+    val currentTime: State<String> get() = _currentTime
+
+    init {
+        // Use a coroutine to update the time every second
+        viewModelScope.launch {
+            while (true) {
+                _currentTime.value = getCurrentTime()
+                delay(1000)
+            }
+        }
+    }
+
+    private fun getCurrentTime(): String {
+        val currentTime = Calendar.getInstance().time
+        val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        return dateFormat.format(currentTime)
+    }
+}
+
 @Composable
-fun DrawBackgrounLines() {
-    var lines by remember { mutableStateOf(listOf<Pair<Float, Float>>()) }
+fun Clock(
+    modifier: Modifier
+) {
+    val viewModel: ClockViewModel = ClockViewModel()
+    val currentTime by viewModel.currentTime
 
-    val distanceBetweenLines = 20.dp
-
-    Canvas(
-        modifier = Modifier.fillMaxSize()
+    Box(
+        modifier = modifier
     ) {
-        val screenSize = size
-        val numberOfHorizontalLines = (screenSize.height / distanceBetweenLines.toPx()).toInt()
-        val numberOfVerticalLines = (screenSize.width / distanceBetweenLines.toPx()).toInt()
-
-        // Draw horizontal lines
-        for (i in 0 until numberOfHorizontalLines) {
-            val y = i * distanceBetweenLines.toPx()
-            lines = lines + Pair(0f, y)
-        }
-
-        // Draw vertical lines
-        for (i in 0 until numberOfVerticalLines) {
-            val x = i * distanceBetweenLines.toPx()
-            lines = lines + Pair(x, 0f)
-        }
-
-        lines.forEach { (x, y) ->
-            drawLine(
-                color = Color.Green,
-                start = Offset(x, y),
-                end = if (x == 0f) Offset(screenSize.width, y) else Offset(x, screenSize.height),
-                strokeWidth = 2.dp.toPx(),
-                cap = StrokeCap.Square
-            )
-        }
+        Text(text = currentTime, fontSize = 16.sp)
     }
 }
