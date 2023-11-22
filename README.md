@@ -9,9 +9,11 @@ This is a simple drawing app built with Kotlin and Jetpack Compose. It provides 
 
 2. **Erase**
     - Switch to eraser mode to remove unwanted strokes.
+    - Erase all of surface
 
 3. **Touch Mode (Dragging)**
     - Enable touch mode to move around the canvas without drawing.
+    - Enable to zoom and rotate objects
 
 4. **Change Color**
     - Select a color from the color palette to change the pen color.
@@ -27,3 +29,9 @@ This is a simple drawing app built with Kotlin and Jetpack Compose. It provides 
 
 8. **Change Stroke Cap**
     - Toggle between different stroke cap styles.
+
+9. **Add Table**
+   - Choose the size of table by dragging and add it to surface
+
+10. **Search Dialog**
+   - Add search dialog to screen to see references etc.

@@ -1,9 +1,13 @@
 package com.example.drawingapp2
 
+import android.annotation.SuppressLint
+import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.PointF
+import android.graphics.RectF
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
@@ -16,23 +20,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.consumePositionChange
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,13 +47,20 @@ import androidx.lifecycle.viewModelScope
 import com.example.drawingapp2.gesture.MotionEvent
 import com.example.drawingapp2.gesture.dragMotionEvent
 import com.example.drawingapp2.menu.DrawingPropertiesMenu
+import com.example.drawingapp2.model.Circle
+import com.example.drawingapp2.model.Line
 import com.example.drawingapp2.model.PathProperties
+import com.example.drawingapp2.model.Rectangle
+import com.example.drawingapp2.model.Table
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.max
+import kotlin.math.sqrt
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun DrawingApp() {
 
@@ -101,11 +114,27 @@ fun DrawingApp() {
      */
     var currentPathProperty by remember { mutableStateOf(PathProperties()) }
 
+    //line drawing
+    var lines by rememberSaveable { mutableStateOf(emptyList<Line>()) }
+    var temporaryLine by mutableStateOf<Line?>(null)
+
+    //circle drawing
+    var circles by rememberSaveable { mutableStateOf(emptyList<Circle>()) }
+    var temporaryCircle by mutableStateOf<Circle?>(null)
+
+    //rect drawing
+    var rectangles by rememberSaveable { mutableStateOf(emptyList<Rectangle>()) }
+    var temporaryRectangle by mutableStateOf<Rectangle?>(null)
+
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
     var bgType by remember { mutableStateOf(0) }
-    var tableRowSize by remember { mutableStateOf( 0) }
-    var tableColumnSize by remember { mutableStateOf( 0) }
+    /*var tableRowSize by remember { mutableStateOf(0) }
+    var tableColumnSize by remember { mutableStateOf(0) }
+
+    var tableScale by remember { mutableStateOf(100f) }
+    var tableStrokeWidth by remember { mutableStateOf(4.dp) }*/
+    val myTable by remember { mutableStateOf(Table()) }
 
     val canvasText = remember { StringBuilder() }
     val paint = remember {
@@ -126,15 +155,16 @@ fun DrawingApp() {
 
     ) {
 
-        var lines by remember { mutableStateOf(listOf<Pair<Float, Float>>()) }
-        var lines2 by remember { mutableStateOf(listOf<Pair<Float, Float>>()) }
+        var bg_lines by remember { mutableStateOf(listOf<Pair<Float, Float>>()) }
+        var tableLines by remember { mutableStateOf(listOf<Pair<Float, Float>>()) }
 
         val distanceBetweenLines = 30.dp
 
-        Canvas(modifier = Modifier
-            .background(currentBackgroundColor)
-            .fillMaxSize()
-        ){
+        Canvas(
+            modifier = Modifier
+                .background(currentBackgroundColor)
+                .fillMaxSize()
+        ) {
             val screenSize = size
             val numberOfHorizontalLines =
                 (screenSize.height / distanceBetweenLines.toPx()).toInt()
@@ -143,35 +173,35 @@ fun DrawingApp() {
 
             when (bgType) {
                 1 -> {
-                    lines = emptyList()
+                    bg_lines = emptyList()
                     // Draw horizontal lines
                     for (i in 0 until numberOfHorizontalLines) {
                         val y = i * distanceBetweenLines.toPx()
-                        lines = lines + Pair(0f, y)
+                        bg_lines = bg_lines + Pair(0f, y)
                     }
                 }
 
                 2 -> {
-                    lines = emptyList()
+                    bg_lines = emptyList()
                     // Draw horizontal lines
                     for (i in 0 until numberOfHorizontalLines) {
                         val y = i * distanceBetweenLines.toPx()
-                        lines = lines + Pair(0f, y)
+                        bg_lines = bg_lines + Pair(0f, y)
                     }
                     // Draw vertical lines
                     for (i in 0 until numberOfVerticalLines) {
                         val x = i * distanceBetweenLines.toPx()
-                        lines = lines + Pair(x, 0f)
+                        bg_lines = bg_lines + Pair(x, 0f)
                     }
                 }
 
                 else -> {
                     // Clear all lines
-                    lines = emptyList()
+                    bg_lines = emptyList()
                 }
             }
 
-            lines.forEach { (x, y) ->
+            bg_lines.forEach { (x, y) ->
                 drawLine(
                     color = Color.Gray,
                     start = Offset(x, y),
@@ -224,43 +254,92 @@ fun DrawingApp() {
             .transformable(
                 state = rememberTransformableState { zoomChange, panChange, rotationChange ->
                     if (drawMode == DrawMode.Touch) {
-                        scale *= zoomChange
-                        myRotation += rotationChange
+                        val scaleFactor = 1.0f + (zoomChange - 1.0f) * 0.2f
+                        scale *= scaleFactor
+                        //myRotation += rotationChange * scaleFactor
+
+                        Log.d("zoom", "zoom: $scale")
+
+                        paths.forEachIndexed { index, entry ->
+                            val originalPath = entry.first
+                            val pathProperties = entry.second
+
+                            // Apply the zoom transformation to the new path
+                            originalPath.zoom(scale)
+                            //originalPath.rotate(myRotation)
+                            if(scale > 1) {
+                                pathProperties.strokeWidth += scale * 3
+                            }
+                            else {
+                                pathProperties.strokeWidth -= scale * 3
+                            }
+                        }
+
+                        // Calculate the desired number of lines based on the current scale
+                        val desiredLineCount = myTable.rowAmount + myTable.columnAmount + 4// Change this to the desired number of lines
+                        val currentLineCount = tableLines.size
+
+                        // Remove lines if needed
+                        if (currentLineCount > desiredLineCount) {
+                            val linesToRemove = currentLineCount - desiredLineCount
+                            tableLines = tableLines.drop(linesToRemove)
+
+                            // Trigger recomposition
+                            Modifier.onGloballyPositioned { coordinates ->
+                                // Do nothing, just trigger recomposition
+                            }
+                        }
+
+                        if(scale > 1) {
+                            myTable.tableScale = 100f + scale * 10
+                            myTable.strokeWidth = 4.dp + (scale).toInt().dp
+                            //tableLines[tableLines.size - 2]
+                            //tableStrokeWidth += (scale).dp
+                        } else {
+                            myTable.tableScale = 100f - scale * 10
+                            //myTable.strokeWidth = 4.dp - (scale).toInt().dp
+                        }
 
                     }
                 }
             )
-            .pointerInput(Unit){
-                if(drawMode == DrawMode.Touch) {
-                    detectDragGestures(
-                        onDragStart = {
-
-                        },
-                        onDrag = { change, dragAmount ->
 
 
-                        },
-                        onDragEnd = {
-
-                        }
-                    )
-                }
-            }
 
         Canvas(
             modifier = drawModifier
-                .then(Modifier
-                    .graphicsLayer {
-                        scaleX = scale; scaleY = scale
-                        rotationZ = myRotation
-                    })
+            /*.then(Modifier
+                .graphicsLayer {
+                    scaleX = scale; scaleY = scale
+                    rotationZ = myRotation
+                })*/
         ) {
 
             when (motionEvent) {
 
                 MotionEvent.Down -> {
-                    if (drawMode != DrawMode.Touch) {
+                    if (drawMode == DrawMode.Draw || drawMode == DrawMode.Erase) {
                         currentPath.moveTo(currentPosition.x, currentPosition.y)
+                    }
+
+                    if (drawMode == DrawMode.LineDraw) {
+                        temporaryLine = Line(
+                            PointF(currentPosition.x, currentPosition.y),
+                            PointF(currentPosition.x, currentPosition.y),
+                            color = currentPathProperty.color
+                        )
+                    }
+
+                    if (drawMode == DrawMode.CircleDraw) {
+                        // Start of the circle
+                        val center = PointF(currentPosition.x, currentPosition.y)
+                        temporaryCircle = Circle(center, 0f, currentPathProperty.color)
+                    }
+
+                    if (drawMode == DrawMode.RectDraw) {
+                        // Start of the rectangle
+                        val leftTop = PointF(currentPosition.x, currentPosition.y)
+                        temporaryRectangle = Rectangle(leftTop, 0f, 0f, currentPathProperty.color)
                     }
 
                     previousPosition = currentPosition
@@ -269,7 +348,7 @@ fun DrawingApp() {
 
                 MotionEvent.Move -> {
 
-                    if (drawMode != DrawMode.Touch) {
+                    if (drawMode == DrawMode.Draw || drawMode == DrawMode.Erase) {
                         currentPath.quadraticBezierTo(
                             previousPosition.x,
                             previousPosition.y,
@@ -279,11 +358,34 @@ fun DrawingApp() {
                         )
                     }
 
+                    if (drawMode == DrawMode.LineDraw) {
+                        temporaryLine?.endPoint?.set(currentPosition.x, currentPosition.y)
+                    }
+
+                    if (drawMode == DrawMode.CircleDraw) {
+                        // Update the radius of the temporary circle as the user drags
+                        temporaryCircle?.let { circle ->
+                            val dx = currentPosition.x - circle.center.x
+                            val dy = currentPosition.y - circle.center.y
+                            circle.radius =
+                                max(0f, sqrt(dx * dx + dy * dy)) // Prevent negative radius
+                        }
+                    }
+
+                    if (drawMode == DrawMode.RectDraw) {
+                        // Update the size of the temporary rectangle as the user drags
+                        temporaryRectangle?.let { rectangle ->
+                            rectangle.width = max(0f, currentPosition.x - rectangle.leftTop.x)
+                            rectangle.height = max(0f, currentPosition.y - rectangle.leftTop.y)
+                        }
+                    }
+
+
                     previousPosition = currentPosition
                 }
 
                 MotionEvent.Up -> {
-                    if (drawMode != DrawMode.Touch) {
+                    if (drawMode == DrawMode.Draw || drawMode == DrawMode.Erase) {
                         currentPath.lineTo(currentPosition.x, currentPosition.y)
 
                         // Pointer is up save current path
@@ -305,6 +407,32 @@ fun DrawingApp() {
                         )
                     }
 
+                    if (drawMode == DrawMode.LineDraw) {
+                        // Touch released, add the line to the list
+                        temporaryLine?.let { line ->
+                            lines = lines + line
+                        }
+
+                    }
+
+                    if (drawMode == DrawMode.CircleDraw) {
+                        // Touch released, add the final version of the circle to the list
+                        temporaryCircle?.let { circle ->
+                            circles = circles + circle
+                        }
+                    }
+
+                    if (drawMode == DrawMode.RectDraw) {
+                        // Touch released, add the final version of the rectangle to the list
+                        temporaryRectangle?.let { rectangle ->
+                            rectangles = rectangles + rectangle
+                        }
+                    }
+
+                    temporaryLine = null
+                    temporaryCircle = null
+                    temporaryRectangle = null
+
                     // Since new path is drawn no need to store paths to undone
                     pathsUndone.clear()
 
@@ -319,36 +447,101 @@ fun DrawingApp() {
             }
 
             // Calculate offsets for centering the table
-            val centerX = (size.width) / 2 - (tableColumnSize / 2  * 100)
-            val centerY = (size.height) / 2 - (tableRowSize / 2 * 100)
+            val centerX = (size.width) / 2 - (myTable.columnAmount / 2 * myTable.tableScale)
+            val centerY = (size.height) / 2 - (myTable.rowAmount / 2 * myTable.tableScale)
 
-            //lines2 = lines2 + Pair(centerX, centerY)
-            //lines2 = lines2 + Pair(centerX + 1, centerY)
-            for (i in 0 until tableRowSize + 1) {
-                val y = i * 100f + centerY
-                lines2 = lines2 + Pair(centerX, y)
+            for (i in 0 until myTable.rowAmount + 1) {
+                val y = i * myTable.tableScale + centerY
+                tableLines = tableLines + Pair(centerX, y)
             }
 
-            for (i in 0 until tableColumnSize + 1) {
-                val x = i * 100f + centerX
-                lines2 = lines2 + Pair(x + 1, centerY)
+            for (i in 0 until myTable.columnAmount + 1) {
+                val x = i * myTable.tableScale + centerX
+                tableLines = tableLines + Pair(x - 0.1f, centerY)
             }
+
 
             with(drawContext.canvas.nativeCanvas) {
-                val tableColor = currentPathProperty.color
-                if (tableRowSize != 0 && tableColumnSize != 0) {
-                    lines2.forEach { (x, y) ->
+                if (myTable.rowAmount != 0 && myTable.columnAmount != 0) {
+                    tableLines.forEach { (x, y) ->
                         drawLine(
-                            color = tableColor,
+                            color = myTable.color,
                             start = Offset(x, y),
-                            end = if (x == centerX) Offset( centerX + tableColumnSize * 100f, y) else Offset(x, centerY + tableRowSize * 100f),
-                            strokeWidth = 4.dp.toPx(),
+                            end = if (x == centerX) Offset(
+                                centerX + myTable.columnAmount * myTable.tableScale, y)
+                            else Offset(x, centerY + myTable.rowAmount * myTable.tableScale),
+                            strokeWidth = myTable.strokeWidth.toPx(),
                             cap = StrokeCap.Square
+                        )
+                    }
+
+
+                }
+
+                val checkPoint = saveLayer(null, null)
+
+                //draw lines
+                if (drawMode == DrawMode.LineDraw) {
+                    temporaryLine?.let { line ->
+                        drawLine(
+                            color = Color.Gray, // Adjust color for temporary line
+                            start = Offset(line.startPoint.x, line.startPoint.y),
+                            end = Offset(line.endPoint.x, line.endPoint.y),
+                            strokeWidth = 10f
                         )
                     }
                 }
 
-                val checkPoint = saveLayer(null, null)
+                lines.forEach { line ->
+                    drawLine(
+                        color = line.color,
+                        start = Offset(line.startPoint.x, line.startPoint.y),
+                        end = Offset(line.endPoint.x, line.endPoint.y),
+                        strokeWidth = 10f
+                    )
+                }
+
+                // draw circles
+                if (drawMode == DrawMode.CircleDraw) {
+                    temporaryCircle?.let { circle ->
+                        drawCircle(
+                            color = Color.Gray, // Adjust color for temporary circle
+                            center = Offset(circle.center.x, circle.center.y),
+                            radius = circle.radius,
+                            style = Stroke(10f)
+                        )
+                    }
+                }
+
+                circles.forEach { circle ->
+                    drawCircle(
+                        color = circle.color,
+                        center = Offset(circle.center.x, circle.center.y),
+                        radius = circle.radius,
+                        style = Stroke(10f)
+                    )
+                }
+
+                // draw rectangles
+                if (drawMode == DrawMode.RectDraw) {
+                    temporaryRectangle?.let { rectangle ->
+                        drawRect(
+                            color = Color.Gray, // Adjust color for temporary rectangle
+                            topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
+                            size = Size(rectangle.width, rectangle.height),
+                            style = Stroke(10f)
+                        )
+                    }
+                }
+
+                rectangles.forEach { rectangle ->
+                    drawRect(
+                        color = rectangle.color,
+                        topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
+                        size = Size(rectangle.width, rectangle.height),
+                        style = Stroke(10f)
+                    )
+                }
 
                 paths.forEach {
 
@@ -380,6 +573,9 @@ fun DrawingApp() {
                         )
                     }
                 }
+
+
+
 
                 if (motionEvent != MotionEvent.Idle) {
 
@@ -471,9 +667,13 @@ fun DrawingApp() {
                 paths.clear()
                 pathsUndone.clear()
                 // delete all lines2
-                lines2 = emptyList()
-                tableRowSize = 0
-                tableColumnSize = 0
+                tableLines = emptyList()
+                myTable.rowAmount = 0
+                myTable.columnAmount = 0
+                //clear figures
+                lines = emptyList()
+                circles = emptyList()
+                rectangles = emptyList()
             },
             onPathPropertiesChange = {
                 motionEvent = MotionEvent.Idle
@@ -492,14 +692,67 @@ fun DrawingApp() {
                 bgType = type
             },
             onDrawTable = { rowInt, columnInt ->
-                lines2 = emptyList()
-                tableRowSize = rowInt
-                tableColumnSize = columnInt
+                tableLines = emptyList()
+                myTable.rowAmount = rowInt
+                myTable.columnAmount = columnInt
             }
 
         )
     }
 
+
+}
+
+private fun Path.zoom(zoom: Float) {
+    val bounds = RectF(
+        this.getBounds().left,
+        this.getBounds().top,
+        this.getBounds().right,
+        this.getBounds().bottom
+    )
+    //this.asAndroidPath().computeBounds(bounds, true)
+
+    val pivotX = bounds.centerX()
+    val pivotY = bounds.centerY()
+
+    val matrix = Matrix()
+
+    // Translate the path so that the pivot point is at the origin
+    matrix.preTranslate(-pivotX, -pivotY)
+
+    // Scale the path uniformly based on the larger dimension
+
+    matrix.postScale(zoom, zoom)
+
+    // Translate the path back to its original position
+    matrix.postTranslate(pivotX, pivotY)
+
+    this.asAndroidPath().transform(matrix)
+}
+
+private fun Path.rotate(rotationDegrees: Float) {
+    val bounds = RectF(
+        this.getBounds().left,
+        this.getBounds().top,
+        this.getBounds().right,
+        this.getBounds().bottom
+    )
+
+    val pivotX = bounds.centerX()
+    val pivotY = bounds.centerY()
+
+    val matrix = Matrix()
+
+    // Translate the path so that the pivot point is at the origin
+    matrix.preTranslate(-pivotX, -pivotY)
+
+    // Rotate the path
+    matrix.postRotate(rotationDegrees)
+
+    // Translate the path back to its original position
+    matrix.postTranslate(pivotX, pivotY)
+
+    this.asAndroidPath().transform(matrix)
 }
 
 

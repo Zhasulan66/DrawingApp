@@ -97,13 +97,11 @@ fun DrawingPropertiesMenu(
     var showEraserDialog by remember { mutableStateOf(false) }
     var showWebDialog by remember { mutableStateOf(false) }
     var showTableDialog by remember { mutableStateOf(false) }
+    var showFigureDialog by remember { mutableStateOf(false) }
     var currentDrawMode = drawMode
 
     Row(
-        modifier = modifier
-//            .background(getRandomColor())
-        ,
-        //verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
         horizontalArrangement = Arrangement.Center
     ) {
         Box(
@@ -182,7 +180,8 @@ fun DrawingPropertiesMenu(
             modifier = Modifier.background(Color.Gray).padding(horizontal = 10.dp)
         ) {
             IconButton(onClick = { //drawmode and dialog
-                 }) {
+                showFigureDialog = !showFigureDialog
+            }) {
                 Icon(
                     painter = painterResource(id = R.drawable.baseline_shape_line_24),
                     contentDescription = null, tint = Color.LightGray
@@ -286,11 +285,26 @@ fun DrawingPropertiesMenu(
     if (showTableDialog) {
         TableDialog(
             { showTableDialog = !showTableDialog }, { showTableDialog = !showTableDialog },
-            onPositiveClick = {rowInt, columnInt ->
+            onPositiveClick = { rowInt, columnInt ->
                 showTableDialog = !showTableDialog
                 onDrawTable(rowInt, columnInt)
             }
         )
+    }
+
+    if (showFigureDialog) {
+        FigureDialog(
+            onDismiss = {
+                showFigureDialog = !showFigureDialog
+            },
+            onDrawModeChanged = {
+                //dismiss included :)
+                currentDrawMode = it
+                onDrawModeChanged(currentDrawMode)
+            }
+        )
+
+
     }
 }
 
@@ -421,6 +435,70 @@ fun WebDialog() {
     }
 }
 
+@Composable
+fun FigureDialog(
+    onDismiss: () -> Unit,
+    onDrawModeChanged: (DrawMode) -> Unit
+) {
+    Dialog(onDismissRequest = { onDismiss() }) {
+
+        Card(
+            //elevation = 2.dp,
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
+
+                Text(
+                    text = "Figures",
+                    color = Blue400,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 12.dp, top = 12.dp)
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                Row() {
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.LineDraw)
+
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_horizontal_line_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.CircleDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_circle_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.RectDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_square_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TableDialog(
@@ -428,7 +506,7 @@ fun TableDialog(
     onNegativeClick: () -> Unit,
     onPositiveClick: (rowInt: Int, columnInt: Int) -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss ) {
+    Dialog(onDismissRequest = onDismiss) {
         Card(
             //elevation = 2.dp,
             shape = RoundedCornerShape(8.dp),
@@ -436,48 +514,82 @@ fun TableDialog(
         ) {
             var rowIntText by remember { mutableStateOf(0) }
             var columnIntText by remember { mutableStateOf(0) }
-            val boxColors = remember { mutableStateListOf<Color>().apply {
-                // Initialize the list with the default color for each box
-                repeat(8 * 12) {
-                    add(Color.LightGray)
-                }
-            }}
-
-            Spacer(Modifier.height(40.dp))
-
-            Column(Modifier.padding(start = 20.dp)
-                .pointerInput(Unit){
-                    detectDragGestures { change, dragAmount ->
-                        // Reset all box colors to light gray initially
-                        for (i in 0 until 8) {
-                            for (j in 0 until 12) {
-                                val index = i * 12 + j
-                                boxColors[index] = Color.LightGray
-                            }
-                        }
-
-                        // Change the color of all boxes with lower i and j
-                        for (row in 0..(change.position.y /50 ).toInt()) {
-                            for (column in 0..(change.position.x /50 ).toInt()) {
-                                val lowerIndex = row * 12 + column
-                                boxColors[lowerIndex] = Color.Gray
-                            }
-                        }
-                        Log.d("Table", "x = ${dragAmount.x}, y = ${dragAmount.y}")
-
-                        rowIntText = (change.position.y /50 ).toInt() + 1
-                        columnIntText = (change.position.x /50 ).toInt() + 1
+            val boxColors = remember {
+                mutableStateListOf<Color>().apply {
+                    // Initialize the list with the default color for each box
+                    repeat(8 * 12) {
+                        add(Color.LightGray)
                     }
                 }
-            ) {
-                for(i in 0 until 8) {
-                    Row (modifier = Modifier.padding(bottom = 5.dp)) {
-                        for (j in 0 until 12) {
+            }
 
-                            val index = i * 12 + j
-                            Box(modifier = Modifier.padding(end = 5.dp).size(20.dp)
-                                .background(boxColors[index])
-                            )
+            Spacer(Modifier.height(40.dp))
+            Column {
+
+                Text(
+                    text = "Table, row = $rowIntText, column = $columnIntText",
+                    modifier = Modifier.padding(start = 20.dp),
+                    color = Color.Black,
+                    fontSize = 16.sp,
+                )
+
+
+                Column(Modifier.padding(start = 20.dp)
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            // Reset all box colors to light gray initially
+                            /*for (i in 0 until 8) {
+                                for (j in 0 until 12) {
+                                    val index = i * 12 + j
+                                    boxColors[index] = Color.LightGray
+                                }
+                            }*/
+                            boxColors.replaceAll { Color.LightGray }
+
+                            // Change the color of all boxes with lower i and j
+                            for (row in 0..(change.position.y / 25.dp.toPx()).toInt()) {
+                                for (column in 0..(change.position.x / 25.dp.toPx()).toInt()) {
+                                    if (row < 8 && column < 12) {
+                                        val lowerIndex = row * 12 + column
+                                        boxColors[lowerIndex] = Color.Gray
+                                    }
+                                }
+                            }
+                            Log.d("Table", "x = ${dragAmount.x}, y = ${dragAmount.y}")
+
+
+                            rowIntText = (change.position.y / 50).toInt() + 1
+                            columnIntText = (change.position.x / 50).toInt() + 1
+
+
+                        }
+                    }
+                ) {
+                    for (i in 0 until 8) {
+                        Row(modifier = Modifier.padding(bottom = 5.dp)) {
+                            for (j in 0 until 12) {
+
+                                val index = i * 12 + j
+                                Box(modifier = Modifier.padding(end = 5.dp).size(20.dp)
+                                    .background(boxColors[index])
+                                    .clickable {
+                                        // Change the color of the clicked box
+                                        boxColors.replaceAll { Color.LightGray }
+                                        boxColors[index] = Color.Gray
+
+                                        // Change the color of all boxes with lower i and j (including the clicked one)
+                                        for (row in 0..i) {
+                                            for (column in 0..j) {
+                                                val lowerIndex = row * 12 + column
+                                                boxColors[lowerIndex] = Color.Gray
+                                                rowIntText = row + 1
+                                                columnIntText = column + 1
+                                            }
+                                        }
+
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -505,13 +617,12 @@ fun TableDialog(
                 }
                 TextButton(
                     onClick =
-                    { onPositiveClick(rowIntText, columnIntText) }
-                    ,
+                    { onPositiveClick(rowIntText, columnIntText) },
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight(),
 
-                ) {
+                    ) {
                     Text(text = "OK")
                 }
             }
