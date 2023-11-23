@@ -129,12 +129,11 @@ fun DrawingApp() {
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
     var bgType by remember { mutableStateOf(0) }
-    /*var tableRowSize by remember { mutableStateOf(0) }
-    var tableColumnSize by remember { mutableStateOf(0) }
-
-    var tableScale by remember { mutableStateOf(100f) }
-    var tableStrokeWidth by remember { mutableStateOf(4.dp) }*/
     val myTable by remember { mutableStateOf(Table()) }
+
+    // Calculate offsets for centering the table
+    var centerX by remember { mutableStateOf(0f) }
+    var centerY by remember { mutableStateOf(0f) }
 
     val canvasText = remember { StringBuilder() }
     val paint = remember {
@@ -239,6 +238,30 @@ fun DrawingApp() {
                             val path: Path = entry.first
                             path.translate(change)
                         }
+
+                        /*val updatedTableLines = tableLines.map { (x, y) ->
+                            Pair(x + currentPosition.x, y + currentPosition.y)
+                        }
+
+                        tableLines = emptyList()
+                        tableLines = updatedTableLines*/
+                        // Calculate the desired number of lines based on the current scale
+                        val desiredLineCount = myTable.rowAmount + myTable.columnAmount - 6
+                        val currentLineCount = tableLines.size
+
+                        // Remove lines if needed
+                        if (currentLineCount > desiredLineCount) {
+                            val linesToRemove = currentLineCount - desiredLineCount
+                            tableLines = tableLines.drop(linesToRemove)
+
+                            // Trigger recomposition
+                            Modifier.onGloballyPositioned { coordinates ->
+                                // Do nothing, just trigger recomposition
+                            }
+                        }
+                        centerX += change.x
+                        centerY += change.y
+
                         currentPath.translate(change)
 
                     }
@@ -253,9 +276,11 @@ fun DrawingApp() {
                 )
             .transformable(
                 state = rememberTransformableState { zoomChange, panChange, rotationChange ->
+                    scale = 1f
                     if (drawMode == DrawMode.Touch) {
                         val scaleFactor = 1.0f + (zoomChange - 1.0f) * 0.2f
                         scale *= scaleFactor
+                        myTable.tableZoom *= scaleFactor
                         //myRotation += rotationChange * scaleFactor
 
                         Log.d("zoom", "zoom: $scale")
@@ -276,7 +301,7 @@ fun DrawingApp() {
                         }
 
                         // Calculate the desired number of lines based on the current scale
-                        val desiredLineCount = myTable.rowAmount + myTable.columnAmount + 4// Change this to the desired number of lines
+                        val desiredLineCount = myTable.rowAmount + myTable.columnAmount - 6
                         val currentLineCount = tableLines.size
 
                         // Remove lines if needed
@@ -290,16 +315,16 @@ fun DrawingApp() {
                             }
                         }
 
-                        if(scale > 1) {
-                            myTable.tableScale = 100f + scale * 10
-                            myTable.strokeWidth = 4.dp + (scale).toInt().dp
+                        if(myTable.tableZoom > 1) {
+                            myTable.tableScale = 100f + myTable.tableZoom * 10
+                            myTable.strokeWidth = 4.dp + (myTable.tableZoom).toInt().dp
                             //tableLines[tableLines.size - 2]
                             //tableStrokeWidth += (scale).dp
                         } else {
-                            myTable.tableScale = 100f - scale * 10
+                            myTable.tableScale = 100f - myTable.tableZoom * 10
                             //myTable.strokeWidth = 4.dp - (scale).toInt().dp
                         }
-
+                        //scale = 1f
                     }
                 }
             )
@@ -314,6 +339,10 @@ fun DrawingApp() {
                     rotationZ = myRotation
                 })*/
         ) {
+
+            // Calculate offsets for centering the table
+            //centerX = (size.width) / 2 - (myTable.columnAmount / 2 * myTable.tableScale)
+            //centerY = (size.height) / 2 - (myTable.rowAmount / 2 * myTable.tableScale)
 
             when (motionEvent) {
 
@@ -446,10 +475,6 @@ fun DrawingApp() {
                 else -> Unit
             }
 
-            // Calculate offsets for centering the table
-            val centerX = (size.width) / 2 - (myTable.columnAmount / 2 * myTable.tableScale)
-            val centerY = (size.height) / 2 - (myTable.rowAmount / 2 * myTable.tableScale)
-
             for (i in 0 until myTable.rowAmount + 1) {
                 val y = i * myTable.tableScale + centerY
                 tableLines = tableLines + Pair(centerX, y)
@@ -459,6 +484,7 @@ fun DrawingApp() {
                 val x = i * myTable.tableScale + centerX
                 tableLines = tableLines + Pair(x - 0.1f, centerY)
             }
+
 
 
             with(drawContext.canvas.nativeCanvas) {
@@ -666,14 +692,16 @@ fun DrawingApp() {
             onClearAll = {
                 paths.clear()
                 pathsUndone.clear()
-                // delete all lines2
+                // delete all tableLines
                 tableLines = emptyList()
+                myTable.tableZoom = 1f
                 myTable.rowAmount = 0
                 myTable.columnAmount = 0
                 //clear figures
                 lines = emptyList()
                 circles = emptyList()
                 rectangles = emptyList()
+
             },
             onPathPropertiesChange = {
                 motionEvent = MotionEvent.Idle
@@ -693,6 +721,7 @@ fun DrawingApp() {
             },
             onDrawTable = { rowInt, columnInt ->
                 tableLines = emptyList()
+                myTable.tableZoom = 1f
                 myTable.rowAmount = rowInt
                 myTable.columnAmount = columnInt
             }

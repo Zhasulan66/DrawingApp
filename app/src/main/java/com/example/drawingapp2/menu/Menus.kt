@@ -538,12 +538,6 @@ fun TableDialog(
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
                             // Reset all box colors to light gray initially
-                            /*for (i in 0 until 8) {
-                                for (j in 0 until 12) {
-                                    val index = i * 12 + j
-                                    boxColors[index] = Color.LightGray
-                                }
-                            }*/
                             boxColors.replaceAll { Color.LightGray }
 
                             // Change the color of all boxes with lower i and j
@@ -555,11 +549,27 @@ fun TableDialog(
                                     }
                                 }
                             }
+                            /*for (row in 0..(change.position.y / 50).toInt()) {
+                                for (column in 0..(change.position.x / 50).toInt()) {
+                                    if (row < 8 && column < 12) {
+                                        val lowerIndex = row * 12 + column
+                                        boxColors[lowerIndex] = Color.Gray
+                                    }
+                                }
+                            }*/
                             Log.d("Table", "x = ${dragAmount.x}, y = ${dragAmount.y}")
-
 
                             rowIntText = (change.position.y / 50).toInt() + 1
                             columnIntText = (change.position.x / 50).toInt() + 1
+
+                            if(rowIntText > 8)
+                                rowIntText = 8
+                            if(columnIntText > 12)
+                                columnIntText = 12
+                            if(rowIntText < 0)
+                                rowIntText = 0
+                            if(columnIntText < 0)
+                                columnIntText = 0
 
 
                         }
