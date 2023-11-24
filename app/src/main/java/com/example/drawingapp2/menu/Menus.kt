@@ -1124,6 +1124,18 @@ fun FigureDialog(
 
                     IconButton(onClick = {
                         onDismiss()
+                        onDrawModeChanged(DrawMode.DashLineDraw)
+
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_linear_scale_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
                         onDrawModeChanged(DrawMode.CircleDraw)
                     }) {
                         Icon(

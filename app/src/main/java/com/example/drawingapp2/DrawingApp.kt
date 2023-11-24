@@ -48,6 +48,7 @@ import com.example.drawingapp2.gesture.MotionEvent
 import com.example.drawingapp2.gesture.dragMotionEvent
 import com.example.drawingapp2.menu.DrawingPropertiesMenu
 import com.example.drawingapp2.model.Circle
+import com.example.drawingapp2.model.DashedLineSegment
 import com.example.drawingapp2.model.Line
 import com.example.drawingapp2.model.PathProperties
 import com.example.drawingapp2.model.Rectangle
@@ -125,6 +126,10 @@ fun DrawingApp() {
     //rect drawing
     var rectangles by rememberSaveable { mutableStateOf(emptyList<Rectangle>()) }
     var temporaryRectangle by mutableStateOf<Rectangle?>(null)
+
+    //dashed Line drawing
+    var dashedLines by rememberSaveable { mutableStateOf(emptyList<DashedLineSegment>()) }
+    var temporaryDashedLine by mutableStateOf<DashedLineSegment?>(null)
 
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
@@ -359,6 +364,14 @@ fun DrawingApp() {
                         )
                     }
 
+                    if (drawMode == DrawMode.DashLineDraw) {
+                        temporaryDashedLine = DashedLineSegment(
+                            PointF(currentPosition.x, currentPosition.y),
+                            PointF(currentPosition.x, currentPosition.y),
+                            color = currentPathProperty.color
+                        )
+                    }
+
                     if (drawMode == DrawMode.CircleDraw) {
                         // Start of the circle
                         val center = PointF(currentPosition.x, currentPosition.y)
@@ -370,6 +383,7 @@ fun DrawingApp() {
                         val leftTop = PointF(currentPosition.x, currentPosition.y)
                         temporaryRectangle = Rectangle(leftTop, 0f, 0f, currentPathProperty.color)
                     }
+
 
                     previousPosition = currentPosition
 
@@ -389,6 +403,10 @@ fun DrawingApp() {
 
                     if (drawMode == DrawMode.LineDraw) {
                         temporaryLine?.endPoint?.set(currentPosition.x, currentPosition.y)
+                    }
+
+                    if (drawMode == DrawMode.DashLineDraw) {
+                        temporaryDashedLine?.end?.set(currentPosition.x, currentPosition.y)
                     }
 
                     if (drawMode == DrawMode.CircleDraw) {
@@ -444,6 +462,15 @@ fun DrawingApp() {
 
                     }
 
+                    if (drawMode == DrawMode.DashLineDraw) {
+
+                        // Drawing dashed lines
+                        temporaryDashedLine?.let { dashedLine  ->
+                            dashedLines = dashedLines + dashedLine
+                        }
+
+                    }
+
                     if (drawMode == DrawMode.CircleDraw) {
                         // Touch released, add the final version of the circle to the list
                         temporaryCircle?.let { circle ->
@@ -459,6 +486,7 @@ fun DrawingApp() {
                     }
 
                     temporaryLine = null
+                    temporaryDashedLine = null
                     temporaryCircle = null
                     temporaryRectangle = null
 
@@ -523,6 +551,27 @@ fun DrawingApp() {
                         color = line.color,
                         start = Offset(line.startPoint.x, line.startPoint.y),
                         end = Offset(line.endPoint.x, line.endPoint.y),
+                        strokeWidth = 10f
+                    )
+                }
+
+                // Drawing dashed lines
+                if (drawMode == DrawMode.DashLineDraw) {
+                    temporaryDashedLine?.let { dashedLine ->
+                        drawLine(
+                            color = Color.Gray, // Adjust color for temporary line
+                            start = Offset(dashedLine.start.x, dashedLine.start.y),
+                            end = Offset(dashedLine.end.x, dashedLine.end.y),
+                            strokeWidth = 10f
+                        )
+                    }
+                }
+
+                dashedLines.forEach { dashedLine ->
+                    drawLine(
+                        color = dashedLine.color,
+                        start = Offset(dashedLine.start.x, dashedLine.start.y),
+                        end = Offset(dashedLine.end.x, dashedLine.end.y),
                         strokeWidth = 10f
                     )
                 }
