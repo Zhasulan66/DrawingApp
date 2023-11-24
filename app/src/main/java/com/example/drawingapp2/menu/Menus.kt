@@ -1,14 +1,17 @@
 package com.example.drawingapp2.menu
 
+import android.os.CountDownTimer
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -23,7 +26,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,6 +41,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -40,7 +50,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -51,6 +63,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -58,9 +71,11 @@ import androidx.compose.ui.window.Dialog
 import com.example.drawingapp2.DrawMode
 import com.example.drawingapp2.R
 import com.example.drawingapp2.model.PathProperties
+import com.example.drawingapp2.model.TimeUnit
 import com.example.drawingapp2.ui.theme.Blue400
 import com.godaddy.android.colorpicker.ClassicColorPicker
 import com.godaddy.android.colorpicker.HsvColor
+import java.util.Timer
 
 @Composable
 fun DrawingPropertiesMenu(
@@ -80,13 +95,16 @@ fun DrawingPropertiesMenu(
     val properties by rememberUpdatedState(newValue = pathProperties)
     var bgColor by remember { mutableStateOf(currentBackgroundColor) }
 
-    var showPropertiesDialog by remember { mutableStateOf(false) }
-    var showBackgroundDialog by remember { mutableStateOf(false) }
     var showEraserDialog by remember { mutableStateOf(false) }
-    var showWebDialog by remember { mutableStateOf(false) }
-    var showTableDialog by remember { mutableStateOf(false) }
-    var showFigureDialog by remember { mutableStateOf(false) }
+    var showPropertiesDialog by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
+    var showBackgroundDialog by remember { mutableStateOf(false) }
+    var showFigureDialog by remember { mutableStateOf(false) }
+    var showFeatureDialog by remember { mutableStateOf(false) }
+    var showTableDialog by remember { mutableStateOf(false) }
+    var showWebDialog by remember { mutableStateOf(false) }
+    var showTimerDialog by remember { mutableStateOf(false) }
+
     var currentDrawMode = drawMode
 
     Row(
@@ -193,9 +211,9 @@ fun DrawingPropertiesMenu(
                 .background(Color.Gray)
                 .padding(horizontal = 10.dp)
         ) {
-            IconButton(onClick = { showTableDialog = !showTableDialog }) {
+            IconButton(onClick = { showFeatureDialog = !showFeatureDialog }) {
                 Icon(
-                    painter = painterResource(id = R.drawable.baseline_view_module_24),
+                    painter = painterResource(id = R.drawable.baseline_hive_24),
                     contentDescription = null, tint = Color.LightGray
                 )
             }
@@ -233,52 +251,6 @@ fun DrawingPropertiesMenu(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .background(Color.Gray)
-                .padding(horizontal = 10.dp)
-        ) {
-            IconButton(onClick = {
-                showWebDialog = !showWebDialog
-            }) {
-                Icon(
-                    painter = painterResource(R.drawable.baseline_web_24),
-                    contentDescription = null,
-                    tint = Color.LightGray
-                )
-            }
-        }
-    }
-
-    if (showBackgroundDialog) {
-        BackgroundSelectionDialog(
-            bgColor,
-            onDismiss = { showBackgroundDialog = !showBackgroundDialog },
-            onNegativeClick = { showBackgroundDialog = !showBackgroundDialog },
-            onPositiveClick = { color: Color, bgType: Int ->
-                showBackgroundDialog = !showBackgroundDialog
-                bgColor = color
-                onBgChanged(bgColor, bgType)
-            }
-        )
-    }
-
-    if (showPropertiesDialog) {
-        PropertiesMenuDialog(
-            pathOption = properties,
-            onDismiss = {
-                showPropertiesDialog = !showPropertiesDialog
-            },
-            onOpenColorPicker = {
-                showColorPicker = !showColorPicker
-            }
-        )
-    }
-
-    if (showColorPicker) {
-        ColorPickerDialog(properties){
-            showColorPicker = !showColorPicker
-        }
     }
 
     if (showEraserDialog) {
@@ -297,16 +269,33 @@ fun DrawingPropertiesMenu(
         )
     }
 
-    if (showWebDialog) {
-        WebDialog()
+    if (showPropertiesDialog) {
+        PropertiesMenuDialog(
+            pathOption = properties,
+            onDismiss = {
+                showPropertiesDialog = !showPropertiesDialog
+            },
+            onOpenColorPicker = {
+                showColorPicker = !showColorPicker
+            }
+        )
     }
 
-    if (showTableDialog) {
-        TableDialog(
-            { showTableDialog = !showTableDialog }, { showTableDialog = !showTableDialog },
-            onPositiveClick = { rowInt, columnInt ->
-                showTableDialog = !showTableDialog
-                onDrawTable(rowInt, columnInt)
+    if (showColorPicker) {
+        ColorPickerDialog(properties) {
+            showColorPicker = !showColorPicker
+        }
+    }
+
+    if (showBackgroundDialog) {
+        BackgroundSelectionDialog(
+            bgColor,
+            onDismiss = { showBackgroundDialog = !showBackgroundDialog },
+            onNegativeClick = { showBackgroundDialog = !showBackgroundDialog },
+            onPositiveClick = { color: Color, bgType: Int ->
+                showBackgroundDialog = !showBackgroundDialog
+                bgColor = color
+                onBgChanged(bgColor, bgType)
             }
         )
     }
@@ -322,8 +311,140 @@ fun DrawingPropertiesMenu(
                 onDrawModeChanged(currentDrawMode)
             }
         )
+    }
 
+    if (showFeatureDialog) {
+        FeatureDialog(
+            onDismiss = {
+                showFeatureDialog = !showFeatureDialog
+            },
+            openTableDialog = {
+                showTableDialog = !showTableDialog
+            },
+            openWebDialog = {
+                showWebDialog = !showWebDialog
+            },
+            openTimerDialog = {
+                showTimerDialog = !showTimerDialog
+            }
+        )
+    }
 
+    if (showTableDialog) {
+        TableDialog(
+            { showTableDialog = !showTableDialog }, { showTableDialog = !showTableDialog },
+            onPositiveClick = { rowInt, columnInt ->
+                showTableDialog = !showTableDialog
+                onDrawTable(rowInt, columnInt)
+            }
+        )
+    }
+
+    if (showWebDialog) {
+        WebDialog()
+    }
+
+    if (showTimerDialog) {
+        TimerDialog(
+            onShowTimerDialog = {
+                showTimerDialog = !showTimerDialog
+            }
+        )
+    }
+}
+
+@Composable
+fun EraserSelectionDialog(
+    pathOption: PathProperties,
+    onDismiss: () -> Unit,
+    onClearAll: () -> Unit,
+    changeToEraseMode: () -> Unit
+) {
+
+    var strokeWidth by remember { mutableStateOf(pathOption.strokeWidth) }
+
+    Dialog(onDismissRequest = { onDismiss() }) {
+
+        Card(
+            //elevation = 2.dp,
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
+
+                Text(
+                    text = "Eraser",
+                    color = Blue400,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 12.dp, top = 12.dp)
+                )
+
+                Canvas(
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp, vertical = 20.dp)
+                        .height(40.dp)
+                        .fillMaxWidth()
+                ) {
+                    val path = Path()
+                    path.moveTo(0f, size.height / 2)
+                    path.lineTo(size.width / 2, size.height / 2)
+
+                    drawPath(
+                        color = Color.Gray,
+                        path = path,
+                        style = Stroke(
+                            width = strokeWidth
+                        )
+                    )
+                }
+
+                Text(
+                    text = "Stroke Width ${strokeWidth.toInt()}",
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                Slider(
+                    value = strokeWidth,
+                    onValueChange = {
+                        strokeWidth = it
+                        pathOption.strokeWidth = strokeWidth
+                    },
+                    valueRange = 1f..100f,
+                    onValueChangeFinished = {}
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row {
+                    IconButton(
+                        onClick = {
+                            changeToEraseMode()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_eraser_black_24dp),
+                            contentDescription = null,
+                            tint = Color.Black
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onClearAll()
+                        onDismiss()
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_clear_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+            }
+        }
     }
 }
 
@@ -697,7 +818,8 @@ fun ColorPickerDialog(
         Column {
 
             ClassicColorPicker(
-                modifier = Modifier.size(300.dp)
+                modifier = Modifier
+                    .size(300.dp)
                     .align(alignment = Alignment.CenterHorizontally),
                 onColorChanged = { color: HsvColor ->
                     pathOption.color = color.toColor()
@@ -709,371 +831,6 @@ fun ColorPickerDialog(
     }
 
 
-}
-
-@Composable
-fun WebDialog() {
-    var myOffset by remember { mutableStateOf(Offset.Zero) }
-    Box(
-        Modifier
-            .fillMaxWidth(0.3f)
-            .fillMaxHeight(0.7f)
-            .offset(x = (myOffset.x / 3).dp, y = (myOffset.y / 3).dp)
-            .pointerInput(Unit) {
-                detectDragGesturesAfterLongPress { change, dragAmount ->
-                    myOffset += dragAmount
-                }
-            },
-        contentAlignment = Alignment.CenterEnd
-    ) {
-        AndroidView(
-            modifier = Modifier.fillMaxSize(),
-            factory = { context ->
-                WebView(context).apply {
-
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-
-
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.databaseEnabled = true
-                    settings.allowFileAccessFromFileURLs = true
-                    settings.setSupportZoom(true)  // Enable zoom controls
-                    settings.builtInZoomControls = true
-                    settings.displayZoomControls = false
-                    settings.useWideViewPort = true
-                    settings.loadWithOverviewMode = true
-                    settings.userAgentString = System.getProperty("http.agent")
-
-                    //settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                    //settings.saveFormData = true
-                    //settings.allowFileAccess = true
-                    //settings.allowContentAccess = true
-                    //settings.defaultZoom = WebSettings.ZoomDensity.CLOSE
-
-                    webViewClient = WebViewClient()
-                }
-            },
-            update = { view ->
-                // Load the URL
-                view.loadUrl("https://www.google.kz/?hl=ru")
-
-
-            }
-        )
-    }
-}
-
-@Composable
-fun FigureDialog(
-    onDismiss: () -> Unit,
-    onDrawModeChanged: (DrawMode) -> Unit
-) {
-    Dialog(onDismissRequest = { onDismiss() }) {
-
-        Card(
-            //elevation = 2.dp,
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-
-                Text(
-                    text = "Figures",
-                    color = Blue400,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 12.dp, top = 12.dp)
-                )
-
-                Spacer(Modifier.height(10.dp))
-
-                Row() {
-                    IconButton(onClick = {
-                        onDismiss()
-                        onDrawModeChanged(DrawMode.LineDraw)
-
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_horizontal_line_24),
-                            contentDescription = null,
-                            tint = Color.LightGray
-                        )
-                    }
-
-                    IconButton(onClick = {
-                        onDismiss()
-                        onDrawModeChanged(DrawMode.CircleDraw)
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_circle_24),
-                            contentDescription = null,
-                            tint = Color.LightGray
-                        )
-                    }
-
-                    IconButton(onClick = {
-                        onDismiss()
-                        onDrawModeChanged(DrawMode.RectDraw)
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_square_24),
-                            contentDescription = null,
-                            tint = Color.LightGray
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TableDialog(
-    onDismiss: () -> Unit,
-    onNegativeClick: () -> Unit,
-    onPositiveClick: (rowInt: Int, columnInt: Int) -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            //elevation = 2.dp,
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            var rowIntText by remember { mutableStateOf(0) }
-            var columnIntText by remember { mutableStateOf(0) }
-            val boxColors = remember {
-                mutableStateListOf<Color>().apply {
-                    // Initialize the list with the default color for each box
-                    repeat(8 * 12) {
-                        add(Color.LightGray)
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(40.dp))
-            Column {
-
-                Text(
-                    text = "Table, row = $rowIntText, column = $columnIntText",
-                    modifier = Modifier.padding(start = 20.dp),
-                    color = Color.Black,
-                    fontSize = 16.sp,
-                )
-
-
-                Column(
-                    Modifier
-                        .padding(start = 20.dp)
-                        .pointerInput(Unit) {
-                            detectDragGestures { change, dragAmount ->
-                                // Reset all box colors to light gray initially
-                                boxColors.replaceAll { Color.LightGray }
-
-                                // Change the color of all boxes with lower i and j
-                                for (row in 0..(change.position.y / 26.dp.toPx()).toInt()) { //25 for tablet
-                                    for (column in 0..(change.position.x / 26.dp.toPx()).toInt()) {
-                                        if (row < 8 && column < 12) {
-                                            val lowerIndex = row * 12 + column
-                                            boxColors[lowerIndex] = Color.Gray
-                                        }
-                                    }
-                                }
-                                /*for (row in 0..(change.position.y / 50).toInt()) {
-                                for (column in 0..(change.position.x / 50).toInt()) {
-                                    if (row < 8 && column < 12) {
-                                        val lowerIndex = row * 12 + column
-                                        boxColors[lowerIndex] = Color.Gray
-                                    }
-                                }
-                            }*/
-                                //Log.d("Table", "x = ${dragAmount.x}, y = ${dragAmount.y}")
-                                Log.d("Table", "x = ${change.position.x}, y = ${change.position.y}")
-
-                                /*rowIntText = (change.position.y / 50).toInt() + 1
-                                columnIntText = (change.position.x / 50).toInt() + 1*/
-                                rowIntText = (change.position.y / 26.dp.toPx()).toInt() + 1
-                                columnIntText = (change.position.x / 26.dp.toPx()).toInt() + 1
-
-                                if (rowIntText > 8)
-                                    rowIntText = 8
-                                if (columnIntText > 12)
-                                    columnIntText = 12
-                                if (rowIntText < 0)
-                                    rowIntText = 0
-                                if (columnIntText < 0)
-                                    columnIntText = 0
-
-
-                            }
-                        }
-                ) {
-                    for (i in 0 until 8) {
-                        Row(modifier = Modifier.padding(bottom = 5.dp)) {
-                            for (j in 0 until 12) {
-
-                                val index = i * 12 + j
-                                Box(modifier = Modifier
-                                    .padding(end = 5.dp)
-                                    .size(20.dp)
-                                    .background(boxColors[index])
-                                    .clickable {
-                                        // Change the color of the clicked box
-                                        boxColors.replaceAll { Color.LightGray }
-                                        boxColors[index] = Color.Gray
-
-                                        // Change the color of all boxes with lower i and j (including the clicked one)
-                                        for (row in 0..i) {
-                                            for (column in 0..j) {
-                                                val lowerIndex = row * 12 + column
-                                                boxColors[lowerIndex] = Color.Gray
-                                                rowIntText = row + 1
-                                                columnIntText = column + 1
-                                            }
-                                        }
-
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(40.dp))
-
-            // Buttons
-            Row(
-                modifier = Modifier
-                    .width(350.dp)
-                    .height(60.dp)
-                    .background(Color(0xffF3E5F5)),
-                verticalAlignment = Alignment.CenterVertically
-
-            ) {
-
-                TextButton(
-                    onClick = onNegativeClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                ) {
-                    Text(text = "CANCEL")
-                }
-                TextButton(
-                    onClick =
-                    { onPositiveClick(rowIntText, columnIntText) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-
-                    ) {
-                    Text(text = "OK")
-                }
-            }
-
-        }
-    }
-
-}
-
-@Composable
-fun EraserSelectionDialog(
-    pathOption: PathProperties,
-    onDismiss: () -> Unit,
-    onClearAll: () -> Unit,
-    changeToEraseMode: () -> Unit
-) {
-
-    var strokeWidth by remember { mutableStateOf(pathOption.strokeWidth) }
-
-    Dialog(onDismissRequest = { onDismiss() }) {
-
-        Card(
-            //elevation = 2.dp,
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-
-                Text(
-                    text = "Eraser",
-                    color = Blue400,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 12.dp, top = 12.dp)
-                )
-
-                Canvas(
-                    modifier = Modifier
-                        .padding(horizontal = 24.dp, vertical = 20.dp)
-                        .height(40.dp)
-                        .fillMaxWidth()
-                ) {
-                    val path = Path()
-                    path.moveTo(0f, size.height / 2)
-                    path.lineTo(size.width / 2, size.height / 2)
-
-                    drawPath(
-                        color = Color.Gray,
-                        path = path,
-                        style = Stroke(
-                            width = strokeWidth
-                        )
-                    )
-                }
-
-                Text(
-                    text = "Stroke Width ${strokeWidth.toInt()}",
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                Slider(
-                    value = strokeWidth,
-                    onValueChange = {
-                        strokeWidth = it
-                        pathOption.strokeWidth = strokeWidth
-                    },
-                    valueRange = 1f..100f,
-                    onValueChangeFinished = {}
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row {
-                    IconButton(
-                        onClick = {
-                            changeToEraseMode()
-                        }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_eraser_black_24dp),
-                            contentDescription = null,
-                            tint = Color.Black
-                        )
-                    }
-
-                    IconButton(onClick = {
-                        onClearAll()
-                        onDismiss()
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_clear_24),
-                            contentDescription = null,
-                            tint = Color.LightGray
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-            }
-        }
-    }
 }
 
 @Composable
@@ -1094,7 +851,7 @@ fun BackgroundSelectionDialog(
     val bgColor7 = colorResource(R.color.dark_blue)
     val bgColor8 = colorResource(R.color.dark_purple)
 
-    var bgType = 0;
+    var bgType = 0
 
     Dialog(onDismissRequest = onDismiss) {
 
@@ -1322,6 +1079,719 @@ fun BackgroundSelectionDialog(
                     ) {
                         Text(text = "OK")
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FigureDialog(
+    onDismiss: () -> Unit,
+    onDrawModeChanged: (DrawMode) -> Unit
+) {
+    Dialog(onDismissRequest = { onDismiss() }) {
+
+        Card(
+            //elevation = 2.dp,
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
+
+                Text(
+                    text = "Figures",
+                    color = Blue400,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 12.dp, top = 12.dp)
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                Row {
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.LineDraw)
+
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_horizontal_line_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.CircleDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_circle_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.RectDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_square_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FeatureDialog(
+    onDismiss: () -> Unit,
+    openTableDialog: () -> Unit,
+    openWebDialog: () -> Unit,
+    openTimerDialog: () -> Unit,
+) {
+    Dialog(onDismissRequest = { onDismiss() }) {
+
+        Card(
+            //elevation = 2.dp,
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            Column(modifier = Modifier.padding(8.dp)) {
+
+                Text(
+                    text = "Features",
+                    color = Blue400,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 12.dp, top = 12.dp)
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                Row {
+                    //Table dialog
+                    IconButton(onClick = {
+                        onDismiss()
+                        openTableDialog()
+
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_view_module_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    //Web Dialog
+                    IconButton(onClick = {
+                        onDismiss()
+                        openWebDialog()
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_web_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    //Timer Dialog
+                    IconButton(onClick = {
+                        onDismiss()
+                        openTimerDialog()
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_time_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TableDialog(
+    onDismiss: () -> Unit,
+    onNegativeClick: () -> Unit,
+    onPositiveClick: (rowInt: Int, columnInt: Int) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            //elevation = 2.dp,
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            var rowIntText by remember { mutableStateOf(0) }
+            var columnIntText by remember { mutableStateOf(0) }
+            val boxColors = remember {
+                mutableStateListOf<Color>().apply {
+                    // Initialize the list with the default color for each box
+                    repeat(8 * 12) {
+                        add(Color.LightGray)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(40.dp))
+            Column {
+
+                Text(
+                    text = "Table, row = $rowIntText, column = $columnIntText",
+                    modifier = Modifier.padding(start = 20.dp),
+                    color = Color.Black,
+                    fontSize = 16.sp,
+                )
+
+
+                Column(
+                    Modifier
+                        .padding(start = 20.dp)
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, dragAmount ->
+                                // Reset all box colors to light gray initially
+                                boxColors.replaceAll { Color.LightGray }
+
+                                // Change the color of all boxes with lower i and j
+                                for (row in 0..(change.position.y / 26.dp.toPx()).toInt()) { //25 for tablet
+                                    for (column in 0..(change.position.x / 26.dp.toPx()).toInt()) {
+                                        if (row < 8 && column < 12) {
+                                            val lowerIndex = row * 12 + column
+                                            boxColors[lowerIndex] = Color.Gray
+                                        }
+                                    }
+                                }
+
+                                rowIntText = (change.position.y / 26.dp.toPx()).toInt() + 1
+                                columnIntText = (change.position.x / 26.dp.toPx()).toInt() + 1
+
+                                if (rowIntText > 8)
+                                    rowIntText = 8
+                                if (columnIntText > 12)
+                                    columnIntText = 12
+                                if (rowIntText < 0)
+                                    rowIntText = 0
+                                if (columnIntText < 0)
+                                    columnIntText = 0
+
+
+                            }
+                        }
+                ) {
+                    for (i in 0 until 8) {
+                        Row(modifier = Modifier.padding(bottom = 5.dp)) {
+                            for (j in 0 until 12) {
+
+                                val index = i * 12 + j
+                                Box(modifier = Modifier
+                                    .padding(end = 5.dp)
+                                    .size(20.dp)
+                                    .background(boxColors[index])
+                                    .clickable {
+                                        // Change the color of the clicked box
+                                        boxColors.replaceAll { Color.LightGray }
+                                        boxColors[index] = Color.Gray
+
+                                        // Change the color of all boxes with lower i and j (including the clicked one)
+                                        for (row in 0..i) {
+                                            for (column in 0..j) {
+                                                val lowerIndex = row * 12 + column
+                                                boxColors[lowerIndex] = Color.Gray
+                                                rowIntText = row + 1
+                                                columnIntText = column + 1
+                                            }
+                                        }
+
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(40.dp))
+
+            // Buttons
+            Row(
+                modifier = Modifier
+                    .width(350.dp)
+                    .height(60.dp)
+                    .background(Color(0xffF3E5F5)),
+                verticalAlignment = Alignment.CenterVertically
+
+            ) {
+
+                TextButton(
+                    onClick = onNegativeClick,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    Text(text = "CANCEL")
+                }
+                TextButton(
+                    onClick =
+                    { onPositiveClick(rowIntText, columnIntText) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+
+                    ) {
+                    Text(text = "OK")
+                }
+            }
+
+        }
+    }
+
+}
+
+@Composable
+fun WebDialog() {
+    var myOffset by remember { mutableStateOf(Offset.Zero) }
+    Box(
+        Modifier
+            .fillMaxWidth(0.3f)
+            .fillMaxHeight(0.7f)
+            .offset(x = (myOffset.x / 3).dp, y = (myOffset.y / 3).dp)
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress { change, dragAmount ->
+                    myOffset += dragAmount
+                }
+            },
+        contentAlignment = Alignment.CenterEnd
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                WebView(context).apply {
+
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+
+
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.databaseEnabled = true
+                    settings.allowFileAccessFromFileURLs = true
+                    settings.setSupportZoom(true)  // Enable zoom controls
+                    settings.builtInZoomControls = true
+                    settings.displayZoomControls = false
+                    settings.useWideViewPort = true
+                    settings.loadWithOverviewMode = true
+                    settings.userAgentString = System.getProperty("http.agent")
+
+                    //settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                    //settings.saveFormData = true
+                    //settings.allowFileAccess = true
+                    //settings.allowContentAccess = true
+                    //settings.defaultZoom = WebSettings.ZoomDensity.CLOSE
+
+                    webViewClient = WebViewClient()
+                }
+            },
+            update = { view ->
+                // Load the URL
+                view.loadUrl("https://www.google.kz/?hl=ru")
+
+
+            }
+        )
+    }
+}
+
+@Composable
+fun TimerDialog(
+    onShowTimerDialog: () -> Unit
+) {
+    var myOffset by remember { mutableStateOf(Offset.Zero) }
+    var countdownText by remember { mutableStateOf("00:00:00") }
+    var counting by remember { mutableStateOf(false) }
+    var countdownTimer: CountDownTimer? by remember { mutableStateOf(null) }
+    var countUpTimer: CountDownTimer? by remember { mutableStateOf(null) }
+    var remainingTime: Long by remember { mutableStateOf(0) }
+    var timerPaused by remember { mutableStateOf(false) }
+    var isCountUp by remember { mutableStateOf(false) }
+
+    var expandMode by remember { mutableStateOf(false) }
+
+    val expandModeModifier = Modifier.fillMaxSize()
+        .background(Color.Black)
+
+    val commonModeModifier = Modifier.width(300.dp)
+        .height(150.dp)
+        .offset(
+            x = (myOffset.x / 3).dp,
+            y = (myOffset.y / 3).dp
+        ) // /3 for speed decreasing
+        .background(Color.Gray)
+        .pointerInput(Unit) {
+            detectDragGestures { change, dragAmount ->
+                myOffset += dragAmount
+            }
+        }
+
+    Box(
+        modifier = if(expandMode) expandModeModifier
+        else commonModeModifier
+
+        ) {
+        var hours by remember { mutableStateOf(0) }
+        var minutes by remember { mutableStateOf(0) }
+        var seconds by remember { mutableStateOf(0) }
+
+        val scrollStateHours = rememberLazyListState()
+        val scrollStateMinutes = rememberLazyListState()
+        val scrollStateSeconds = rememberLazyListState()
+
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize().then(
+                    if (expandMode){
+                    Modifier
+                        .pointerInput(Unit) {
+                            detectTapGestures{
+                                expandMode =!expandMode
+                            }
+                        }
+                     }else Modifier
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            if (!expandMode) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(
+                        onClick = {
+                            onShowTimerDialog()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_cancel_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .width(300.dp)
+                    .height(50.dp)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!counting) {
+                    ScrollableTimer(
+                        scrollStateHours,
+                        value = hours,
+                        timeUnit = TimeUnit.HOURS,
+                        onValueChanged = { hours = it }
+                    )
+                    Text(":", color = Color.White, fontSize = 30.sp)
+                    ScrollableTimer(
+                        scrollStateMinutes,
+                        value = minutes,
+                        timeUnit = TimeUnit.MINUTES,
+                        onValueChanged = { minutes = it }
+                    )
+                    Text(":", color = Color.White, fontSize = 30.sp)
+                    ScrollableTimer(
+                        scrollStateSeconds,
+                        value = seconds,
+                        timeUnit = TimeUnit.SECONDS,
+                        onValueChanged = { seconds = it }
+                    )
+                } else {
+                    val (hoursText, minutesText, secondsText) = countdownText.split(":")
+                    TimerText(hoursText)
+                    Text(":", color = Color.White, fontSize = 30.sp)
+                    TimerText(minutesText)
+                    Text(":", color = Color.White, fontSize = 30.sp)
+                    TimerText(secondsText)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            if (!expandMode) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    //ok button
+                    IconButton(onClick = {
+                        // Reset timer values
+                        hours = 0
+                        minutes = 0
+                        seconds = 0
+                        counting = false
+                        countdownText = "00:00:00"
+                        timerPaused = false
+                        countdownTimer?.cancel()
+                        countUpTimer?.cancel()
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_restart_alt_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    //play btn
+                    IconButton(onClick = {
+                        if (!counting) {
+                            // Start countdown timer
+                            countdownTimer?.cancel()
+                            countUpTimer?.cancel()
+                            counting = true
+
+                            isCountUp = hours == 0 && minutes == 0 && seconds == 0
+
+                            if (isCountUp) {
+                                var elapsedSeconds = 0
+
+                                countUpTimer = object : CountDownTimer(Long.MAX_VALUE, 1000) {
+                                    override fun onTick(millisUntilFinished: Long) {
+                                        hours = elapsedSeconds / 3600
+                                        minutes = (elapsedSeconds % 3600) / 60
+                                        seconds = elapsedSeconds % 60
+
+                                        val formattedTime = String.format(
+                                            "%02d:%02d:%02d",
+                                            hours,
+                                            minutes,
+                                            seconds
+                                        )
+
+                                        countdownText = formattedTime
+                                        elapsedSeconds++
+                                    }
+
+                                    override fun onFinish() {
+                                        // Not used in CountUp timer
+                                        //countdownText = "00:00:00"
+                                        counting = false
+                                    }
+                                }.start()
+                            } else {
+                                val totalMilliseconds =
+                                    (hours * 3600 + minutes * 60 + seconds) * 1000L
+
+                                countdownTimer = object : CountDownTimer(totalMilliseconds, 1000) {
+                                    override fun onTick(millisUntilFinished: Long) {
+                                        hours = (millisUntilFinished / 3600000).toInt()
+                                        minutes =
+                                            ((millisUntilFinished % 3600000) / 60000).toInt()
+                                        seconds =
+                                            ((millisUntilFinished % 60000) / 1000).toInt()
+
+                                        val formattedTime = String.format(
+                                            "%02d:%02d:%02d",
+                                            hours,
+                                            minutes,
+                                            seconds
+                                        )
+
+                                        countdownText = formattedTime
+                                    }
+
+                                    override fun onFinish() {
+                                        countdownText = "00:00:00"
+                                        counting = false
+                                    }
+                                }.start()
+                            }
+                        } else {
+                            // Pause or resume countdown timer
+                            if (!timerPaused) {
+                                remainingTime = (hours * 3600 + minutes * 60 + seconds) * 1000L
+                                countdownTimer?.cancel()
+                                countUpTimer?.cancel()
+                                timerPaused = true
+                            } else {
+                                val totalMilliseconds =
+                                    (hours * 3600 + minutes * 60 + seconds) * 1000L
+
+                                val time =
+                                    if (remainingTime > 0) remainingTime else totalMilliseconds
+
+
+                                if (isCountUp) {
+                                    var elapsedSeconds = time / 1000
+
+                                    countUpTimer = object : CountDownTimer(Long.MAX_VALUE, 1000) {
+                                        override fun onTick(millisUntilFinished: Long) {
+                                            hours = (elapsedSeconds / 3600).toInt()
+                                            minutes = ((elapsedSeconds % 3600) / 60).toInt()
+                                            seconds = (elapsedSeconds % 60).toInt()
+
+                                            val formattedTime = String.format(
+                                                "%02d:%02d:%02d",
+                                                hours,
+                                                minutes,
+                                                seconds
+                                            )
+
+                                            countdownText = formattedTime
+                                            elapsedSeconds++
+                                        }
+
+                                        override fun onFinish() {
+                                            // Not used in CountUp timer
+                                            //countdownText = "00:00:00"
+                                            counting = false
+                                        }
+                                    }.start()
+                                } else {
+
+                                    countdownTimer = object : CountDownTimer(time, 1000) {
+                                        override fun onTick(millisUntilFinished: Long) {
+                                            hours = (millisUntilFinished / 3600000).toInt()
+                                            minutes =
+                                                ((millisUntilFinished % 3600000) / 60000).toInt()
+                                            seconds =
+                                                ((millisUntilFinished % 60000) / 1000).toInt()
+
+                                            val formattedTime = String.format(
+                                                "%02d:%02d:%02d",
+                                                hours,
+                                                minutes,
+                                                seconds
+                                            )
+
+                                            countdownText = formattedTime
+                                        }
+
+                                        override fun onFinish() {
+                                            countdownText = "00:00:00"
+                                            counting = false
+                                        }
+                                    }.start()
+                                }
+
+                                timerPaused = false
+                            }
+
+                        }
+                    }) {
+                        Icon(
+                            painter = if (counting && !timerPaused)
+                                painterResource(R.drawable.baseline_pause_circle_24)
+                            else painterResource(R.drawable.baseline_play_circle_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    //expand btn
+                    IconButton(onClick = {
+                        expandMode = !expandMode
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_aspect_ratio_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TimerText(
+    text: String
+) {
+    Box(
+        modifier = Modifier
+            .width(90.dp)
+            .height(80.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .padding(4.dp)
+                .background(
+                    color = Color.Transparent
+                )
+        ) {
+            Text(
+                text = text,
+                color = Color.White,
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Composable
+fun ScrollableTimer(
+    scrollState: LazyListState,
+    value: Int,
+    timeUnit: TimeUnit,
+    onValueChanged: (Int) -> Unit
+) {
+    val items = when (timeUnit) {
+        TimeUnit.HOURS -> (0..23).toList()
+        TimeUnit.MINUTES, TimeUnit.SECONDS -> (0..59).toList()
+    }
+
+    Box(
+        modifier = Modifier
+            .width(90.dp)
+            .height(80.dp)
+            .padding(4.dp)
+    ) {
+        LazyColumn(
+            state = scrollState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            itemsIndexed(items) { index, item ->
+                val formattedItem = "%02d".format(item) // Ensure 2-digit format
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .padding(4.dp)
+                        .background(
+                            color = Color.Transparent
+                        )
+                        .clickable {
+                            onValueChanged(index)
+                        }
+                ) {
+                    Text(
+                        text = formattedItem,
+                        color = Color.White,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }

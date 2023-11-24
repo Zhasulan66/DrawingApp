@@ -246,7 +246,7 @@ fun DrawingApp() {
                         tableLines = emptyList()
                         tableLines = updatedTableLines*/
                         // Calculate the desired number of lines based on the current scale
-                        val desiredLineCount = myTable.rowAmount + myTable.columnAmount - 6
+                        val desiredLineCount = myTable.rowAmount /2 // + myTable.columnAmount
                         val currentLineCount = tableLines.size
 
                         // Remove lines if needed
@@ -301,7 +301,7 @@ fun DrawingApp() {
                         }
 
                         // Calculate the desired number of lines based on the current scale
-                        val desiredLineCount = myTable.rowAmount + myTable.columnAmount - 6
+                        val desiredLineCount = myTable.rowAmount + myTable.columnAmount - 7
                         val currentLineCount = tableLines.size
 
                         // Remove lines if needed
