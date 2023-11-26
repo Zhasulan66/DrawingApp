@@ -1,11 +1,21 @@
 package com.example.drawingapp2.menu
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.os.Build
 import android.os.CountDownTimer
+import android.provider.MediaStore
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +36,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -42,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,9 +68,11 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -104,8 +118,18 @@ fun DrawingPropertiesMenu(
     var showTableDialog by remember { mutableStateOf(false) }
     var showWebDialog by remember { mutableStateOf(false) }
     var showTimerDialog by remember { mutableStateOf(false) }
+    var showMyImage by remember { mutableStateOf(false) }
 
     var currentDrawMode = drawMode
+
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val context = LocalContext.current
+    val bitmap = remember { mutableStateOf<Bitmap?>(null) }
+
+    val launcher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
+            imageUri = uri
+        }
 
     Row(
         modifier = modifier,
@@ -326,7 +350,11 @@ fun DrawingPropertiesMenu(
             },
             openTimerDialog = {
                 showTimerDialog = !showTimerDialog
-            }
+            },
+            openImageDialog = {
+                showMyImage = !showMyImage
+            },
+            launcher = launcher
         )
     }
 
@@ -351,6 +379,16 @@ fun DrawingPropertiesMenu(
             }
         )
     }
+
+    if (showMyImage) {
+        ImageDialog(
+            imageUri,
+            context,
+            bitmap,
+            launcher
+        )
+    }
+
 }
 
 @Composable
@@ -1167,6 +1205,8 @@ fun FeatureDialog(
     openTableDialog: () -> Unit,
     openWebDialog: () -> Unit,
     openTimerDialog: () -> Unit,
+    openImageDialog: () -> Unit,
+    launcher: ManagedActivityResultLauncher<String, Uri?>
 ) {
     Dialog(onDismissRequest = { onDismiss() }) {
 
@@ -1220,6 +1260,19 @@ fun FeatureDialog(
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.baseline_time_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    //Image Dialog
+                    IconButton(onClick = {
+                        onDismiss()
+                        openImageDialog()
+                        launcher.launch("image/*")
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_image_24),
                             contentDescription = null,
                             tint = Color.LightGray
                         )
@@ -1809,3 +1862,53 @@ fun ScrollableTimer(
         }
     }
 }
+
+@Composable
+fun ImageDialog(
+    imageUri: Uri?,
+    context: Context,
+    bitmap: MutableState<Bitmap?>,
+    launcher: ManagedActivityResultLauncher<String, Uri?>
+    ) {
+
+    var myOffset by remember { mutableStateOf(Offset.Zero) }
+
+    Column(
+        modifier = Modifier.wrapContentSize()
+            .offset(
+                x = (myOffset.x / 3).dp,
+                y = (myOffset.y / 3).dp
+            ) // /3 for speed decreasing
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    myOffset += dragAmount
+                }
+            },
+    ) {
+
+        imageUri?.let {
+            if (Build.VERSION.SDK_INT < 28) {
+                bitmap.value = MediaStore.Images
+                    .Media.getBitmap(context.contentResolver, it)
+            } else {
+                val source = ImageDecoder.createSource(context.contentResolver, it)
+                bitmap.value = ImageDecoder.decodeBitmap(source)
+            }
+
+            bitmap.value?.let { btm ->
+                Image(
+                    bitmap = btm.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        //.size(400.dp)
+                        .wrapContentSize()
+                        .padding(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+
+}
+
