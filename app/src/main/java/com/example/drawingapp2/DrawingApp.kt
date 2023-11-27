@@ -6,6 +6,7 @@ import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PointF
+import android.graphics.Rect
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
@@ -31,12 +32,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.asImageBitmap
@@ -59,17 +61,24 @@ import com.example.drawingapp2.gesture.MotionEvent
 import com.example.drawingapp2.gesture.dragMotionEvent
 import com.example.drawingapp2.menu.DrawingPropertiesMenu
 import com.example.drawingapp2.model.Circle
-import com.example.drawingapp2.model.DashedLineSegment
+import com.example.drawingapp2.model.HalfCircle
 import com.example.drawingapp2.model.Line
+import com.example.drawingapp2.model.Octagon
 import com.example.drawingapp2.model.PathProperties
 import com.example.drawingapp2.model.Rectangle
 import com.example.drawingapp2.model.Table
+import com.example.drawingapp2.model.Triangle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 @SuppressLint("UnrememberedMutableState")
@@ -130,17 +139,40 @@ fun DrawingApp() {
     var lines by rememberSaveable { mutableStateOf(emptyList<Line>()) }
     var temporaryLine by mutableStateOf<Line?>(null)
 
-    //circle drawing
-    var circles by rememberSaveable { mutableStateOf(emptyList<Circle>()) }
-    var temporaryCircle by mutableStateOf<Circle?>(null)
+    //dashed Line drawing
+    var dashedLines by rememberSaveable { mutableStateOf(emptyList<Line>()) }
+    var temporaryDashedLine by mutableStateOf<Line?>(null)
+
+    //line with arrow drawing
+    var arrowLines by rememberSaveable { mutableStateOf(emptyList<Line>()) }
+    var temporaryArrowLine by mutableStateOf<Line?>(null)
+
+    //dashed line with arrow drawing
+    var dashedArrowLines by rememberSaveable { mutableStateOf(emptyList<Line>()) }
+    var temporaryDashedArrowLine by mutableStateOf<Line?>(null)
+
+    //triangle drawing
+    var triangles by remember { mutableStateOf(emptyList<Triangle>()) }
+    var temporaryTriangle by remember { mutableStateOf<Triangle?>(null) }
 
     //rect drawing
     var rectangles by rememberSaveable { mutableStateOf(emptyList<Rectangle>()) }
     var temporaryRectangle by mutableStateOf<Rectangle?>(null)
 
-    //dashed Line drawing
-    var dashedLines by rememberSaveable { mutableStateOf(emptyList<DashedLineSegment>()) }
-    var temporaryDashedLine by mutableStateOf<DashedLineSegment?>(null)
+    // round rect drawing
+    var roundRectangles by rememberSaveable { mutableStateOf(emptyList<Rectangle>()) }
+    var temporaryRoundRectangle by mutableStateOf<Rectangle?>(null)
+
+    //circle drawing
+    var circles by rememberSaveable { mutableStateOf(emptyList<Circle>()) }
+    var temporaryCircle by mutableStateOf<Circle?>(null)
+
+    // Half circle drawing
+    var halfCircles by remember { mutableStateOf(emptyList<HalfCircle>()) }
+    var temporaryHalfCircle by remember { mutableStateOf<HalfCircle?>(null) }
+
+    var octagons by remember { mutableStateOf(emptyList<Octagon>()) }
+    var temporaryOctagon by remember { mutableStateOf<Octagon?>(null) }
 
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
@@ -169,6 +201,8 @@ fun DrawingApp() {
 
     var scale by remember { mutableStateOf(1f) }
     var myRotation by remember { mutableStateOf(0f) }
+
+    var initialTouchPoint by mutableStateOf(Offset.Zero)
 
 
 
@@ -327,7 +361,8 @@ fun DrawingApp() {
                         }
 
                         // Calculate the desired number of lines based on the current scale
-                        val desiredLineCount = myTable.rowAmount + myTable.columnAmount - 7
+                        val desiredLineCount =
+                            myTable.rowAmount + myTable.columnAmount - 10 // extra lines while dragging to delete
                         val currentLineCount = tableLines.size
 
                         // Remove lines if needed
@@ -359,12 +394,9 @@ fun DrawingApp() {
 
         Canvas(
             modifier = drawModifier
-            /*.then(Modifier
-                .graphicsLayer {
-                    scaleX = scale; scaleY = scale
-                    rotationZ = myRotation
-                })*/
         ) {
+
+            //motion events
 
             when (motionEvent) {
 
@@ -382,10 +414,51 @@ fun DrawingApp() {
                     }
 
                     if (drawMode == DrawMode.DashLineDraw) {
-                        temporaryDashedLine = DashedLineSegment(
+                        temporaryDashedLine = Line(
                             PointF(currentPosition.x, currentPosition.y),
                             PointF(currentPosition.x, currentPosition.y),
                             color = currentPathProperty.color
+                        )
+                    }
+
+                    if (drawMode == DrawMode.ArrowLineDraw) {
+                        temporaryArrowLine = Line(
+                            PointF(currentPosition.x, currentPosition.y),
+                            PointF(currentPosition.x, currentPosition.y),
+                            color = currentPathProperty.color
+                        )
+                    }
+
+                    if (drawMode == DrawMode.DashArrowLineDraw) {
+                        temporaryDashedArrowLine = Line(
+                            PointF(currentPosition.x, currentPosition.y),
+                            PointF(currentPosition.x, currentPosition.y),
+                            color = currentPathProperty.color
+                        )
+                    }
+
+                    if (drawMode == DrawMode.TriangleDraw) {
+                        temporaryTriangle = Triangle(currentPosition, currentPosition, currentPosition, currentPathProperty.color)
+                    }
+
+                    if (drawMode == DrawMode.RectDraw) {
+                        // Start of the rectangle
+                        initialTouchPoint = currentPosition
+                        temporaryRectangle = Rectangle(
+                            PointF(currentPosition.x, currentPosition.y),
+                            0f,
+                            0f,
+                            currentPathProperty.color
+                        )
+                    }
+
+                    if (drawMode == DrawMode.RoundRectDraw) {
+                        initialTouchPoint = currentPosition
+                        temporaryRoundRectangle = Rectangle(
+                            PointF(currentPosition.x, currentPosition.y),
+                            0f,
+                            0f,
+                            currentPathProperty.color
                         )
                     }
 
@@ -395,12 +468,14 @@ fun DrawingApp() {
                         temporaryCircle = Circle(center, 0f, currentPathProperty.color)
                     }
 
-                    if (drawMode == DrawMode.RectDraw) {
-                        // Start of the rectangle
-                        val leftTop = PointF(currentPosition.x, currentPosition.y)
-                        temporaryRectangle = Rectangle(leftTop, 0f, 0f, currentPathProperty.color)
+                    if (drawMode == DrawMode.HalfCircleDraw) {
+                        initialTouchPoint = currentPosition
+                        temporaryHalfCircle = HalfCircle(currentPosition.x, currentPosition.y, 0f, currentPathProperty.color, true)
                     }
 
+                    if (drawMode == DrawMode.OctagonDraw) {
+                        temporaryOctagon = Octagon(List(8) { currentPosition }.toMutableList(), currentPathProperty.color)
+                    }
 
                     previousPosition = currentPosition
 
@@ -419,11 +494,55 @@ fun DrawingApp() {
                     }
 
                     if (drawMode == DrawMode.LineDraw) {
-                        temporaryLine?.endPoint?.set(currentPosition.x, currentPosition.y)
+                        temporaryLine?.end?.set(currentPosition.x, currentPosition.y)
                     }
 
                     if (drawMode == DrawMode.DashLineDraw) {
                         temporaryDashedLine?.end?.set(currentPosition.x, currentPosition.y)
+                    }
+
+                    if (drawMode == DrawMode.ArrowLineDraw) {
+                        temporaryArrowLine?.end?.set(currentPosition.x, currentPosition.y)
+                    }
+
+                    if (drawMode == DrawMode.DashArrowLineDraw) {
+                        temporaryDashedArrowLine?.end?.set(currentPosition.x, currentPosition.y)
+                    }
+
+                    if (drawMode == DrawMode.TriangleDraw) {
+                        temporaryTriangle?.let { triangle ->
+                            triangle.point2 = currentPosition
+                            triangle.point3 = Offset(currentPosition.x, triangle.point1.y)
+                        }
+                    }
+
+                    if (drawMode == DrawMode.RectDraw) {
+                        // Update the size of the temporary rectangle as the user drags
+                        val left = min(initialTouchPoint.x, currentPosition.x)
+                        val top = min(initialTouchPoint.y, currentPosition.y)
+                        val right = max(initialTouchPoint.x, currentPosition.x)
+                        val bottom = max(initialTouchPoint.y, currentPosition.y)
+
+                        temporaryRectangle?.let { rectangle ->
+                            rectangle.leftTop.x = left
+                            rectangle.leftTop.y = top
+                            rectangle.width = right - left
+                            rectangle.height = bottom - top
+                        }
+                    }
+
+                    if (drawMode == DrawMode.RoundRectDraw) {
+                        val left = min(initialTouchPoint.x, currentPosition.x)
+                        val top = min(initialTouchPoint.y, currentPosition.y)
+                        val right = max(initialTouchPoint.x, currentPosition.x)
+                        val bottom = max(initialTouchPoint.y, currentPosition.y)
+
+                        temporaryRoundRectangle?.let { rectangle ->
+                            rectangle.leftTop.x = left
+                            rectangle.leftTop.y = top
+                            rectangle.width = right - left
+                            rectangle.height = bottom - top
+                        }
                     }
 
                     if (drawMode == DrawMode.CircleDraw) {
@@ -436,14 +555,25 @@ fun DrawingApp() {
                         }
                     }
 
-                    if (drawMode == DrawMode.RectDraw) {
-                        // Update the size of the temporary rectangle as the user drags
-                        temporaryRectangle?.let { rectangle ->
-                            rectangle.width = max(0f, currentPosition.x - rectangle.leftTop.x)
-                            rectangle.height = max(0f, currentPosition.y - rectangle.leftTop.y)
+                    if (drawMode == DrawMode.HalfCircleDraw) {
+                        temporaryHalfCircle?.let { halfCircle ->
+                            val deltaY = currentPosition.y - initialTouchPoint.y
+                            val radius = abs(deltaY)
+                            halfCircle.radius = radius
+
+                            // Determine if the touch is going towards the top or bottom
+                            halfCircle.isTop = currentPosition.y < initialTouchPoint.y
+
                         }
                     }
 
+                    if (drawMode == DrawMode.OctagonDraw) {
+                        temporaryOctagon?.let { octagon ->
+                            octagon.points.forEachIndexed { index, _ ->
+                                octagon.points[index] = calculateOctagonPoint(currentPosition, index)
+                            }
+                        }
+                    }
 
                     previousPosition = currentPosition
                 }
@@ -488,10 +618,27 @@ fun DrawingApp() {
 
                     }
 
-                    if (drawMode == DrawMode.CircleDraw) {
-                        // Touch released, add the final version of the circle to the list
-                        temporaryCircle?.let { circle ->
-                            circles = circles + circle
+                    if (drawMode == DrawMode.ArrowLineDraw) {
+
+                        // Drawing arrow lines
+                        temporaryArrowLine?.let { arrowLine ->
+                            arrowLines = arrowLines + arrowLine
+                        }
+
+                    }
+
+                    if (drawMode == DrawMode.DashArrowLineDraw) {
+
+                        // Drawing arrow lines
+                        temporaryDashedArrowLine?.let { dashedArrowLine ->
+                            dashedArrowLines = dashedArrowLines + dashedArrowLine
+                        }
+
+                    }
+
+                    if (drawMode == DrawMode.TriangleDraw) {
+                        temporaryTriangle?.let { triangle ->
+                            triangles = triangles + triangle
                         }
                     }
 
@@ -502,10 +649,42 @@ fun DrawingApp() {
                         }
                     }
 
+                    if (drawMode == DrawMode.RoundRectDraw) {
+                        // Touch released, add the final version of the rectangle to the list
+                        temporaryRoundRectangle?.let { rectangle ->
+                            roundRectangles = roundRectangles + rectangle
+                        }
+                    }
+
+                    if (drawMode == DrawMode.CircleDraw) {
+                        // Touch released, add the final version of the circle to the list
+                        temporaryCircle?.let { circle ->
+                            circles = circles + circle
+                        }
+                    }
+
+                    if (drawMode == DrawMode.HalfCircleDraw) {
+                        temporaryHalfCircle?.let { halfCircle ->
+                            halfCircles = halfCircles + halfCircle
+                        }
+                    }
+
+                    if (drawMode == DrawMode.OctagonDraw) {
+                        temporaryOctagon?.let { octagon ->
+                            octagons = octagons + octagon
+                        }
+                    }
+
                     temporaryLine = null
                     temporaryDashedLine = null
-                    temporaryCircle = null
+                    temporaryArrowLine = null
+                    temporaryDashedArrowLine = null
+                    temporaryTriangle = null
                     temporaryRectangle = null
+                    temporaryRoundRectangle = null
+                    temporaryCircle = null
+                    temporaryHalfCircle = null
+                    temporaryOctagon = null
 
                     // Since new path is drawn no need to store paths to undone
                     pathsUndone.clear()
@@ -546,8 +725,8 @@ fun DrawingApp() {
                     bitmap.value?.let { btm ->
                         drawImage(
                             image = btm.asImageBitmap(),
-                            dstOffset  = IntOffset(x = centerX.toInt(), y = centerY.toInt()),
-                            dstSize  = IntSize(btm.width, btm.height),
+                            dstOffset = IntOffset(x = centerX.toInt(), y = centerY.toInt()),
+                            dstSize = IntSize(btm.width, btm.height),
                         )
                     }
                 }
@@ -575,9 +754,9 @@ fun DrawingApp() {
                 if (drawMode == DrawMode.LineDraw) {
                     temporaryLine?.let { line ->
                         drawLine(
-                            color = Color.Gray, // Adjust color for temporary line
-                            start = Offset(line.startPoint.x, line.startPoint.y),
-                            end = Offset(line.endPoint.x, line.endPoint.y),
+                            color = Color.Gray,
+                            start = Offset(line.start.x, line.start.y),
+                            end = Offset(line.end.x, line.end.y),
                             strokeWidth = 10f
                         )
                     }
@@ -586,8 +765,8 @@ fun DrawingApp() {
                 lines.forEach { line ->
                     drawLine(
                         color = line.color,
-                        start = Offset(line.startPoint.x, line.startPoint.y),
-                        end = Offset(line.endPoint.x, line.endPoint.y),
+                        start = Offset(line.start.x, line.start.y),
+                        end = Offset(line.end.x, line.end.y),
                         strokeWidth = 10f
                     )
                 }
@@ -596,10 +775,11 @@ fun DrawingApp() {
                 if (drawMode == DrawMode.DashLineDraw) {
                     temporaryDashedLine?.let { dashedLine ->
                         drawLine(
-                            color = Color.Gray, // Adjust color for temporary line
+                            color = Color.Gray,
                             start = Offset(dashedLine.start.x, dashedLine.start.y),
                             end = Offset(dashedLine.end.x, dashedLine.end.y),
-                            strokeWidth = 10f
+                            strokeWidth = 10f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
                         )
                     }
                 }
@@ -609,7 +789,182 @@ fun DrawingApp() {
                         color = dashedLine.color,
                         start = Offset(dashedLine.start.x, dashedLine.start.y),
                         end = Offset(dashedLine.end.x, dashedLine.end.y),
-                        strokeWidth = 10f
+                        strokeWidth = 10f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                    )
+                }
+
+                // Drawing Arrow lines
+                if (drawMode == DrawMode.ArrowLineDraw) {
+                    temporaryArrowLine?.let { arrowLine ->
+                        val path = Path()
+                        path.moveTo(arrowLine.start.x, arrowLine.start.y)
+                        path.lineTo(arrowLine.end.x, arrowLine.end.y)
+
+                        drawPath(path, color = arrowLine.color, style = Stroke(width = 10f))
+
+                        // Calculate arrowhead points
+                        val angle = atan2(
+                            arrowLine.end.y - arrowLine.start.y,
+                            arrowLine.end.x - arrowLine.start.x
+                        )
+                        val arrowPoints = calculateArrowheadPoints(
+                            Offset(arrowLine.end.x, arrowLine.end.y),
+                            angle
+                        )
+
+                        // Draw the arrowhead
+                        drawPath(arrowPoints, color = arrowLine.color, style = Stroke(width = 10f))
+                    }
+                }
+
+                arrowLines.forEach { arrowLine ->
+
+                    val path = Path()
+                    path.moveTo(arrowLine.start.x, arrowLine.start.y)
+                    path.lineTo(arrowLine.end.x, arrowLine.end.y)
+
+                    drawPath(path, color = arrowLine.color, style = Stroke(width = 10f))
+
+                    // Calculate arrowhead points
+                    val angle = atan2(
+                        arrowLine.end.y - arrowLine.start.y,
+                        arrowLine.end.x - arrowLine.start.x
+                    )
+                    val arrowPoints =
+                        calculateArrowheadPoints(Offset(arrowLine.end.x, arrowLine.end.y), angle)
+
+                    // Draw the arrowhead
+                    drawPath(arrowPoints, color = arrowLine.color, style = Stroke(width = 10f))
+                }
+
+                // Drawing Dashed Arrow lines
+                if (drawMode == DrawMode.DashArrowLineDraw) {
+                    temporaryDashedArrowLine?.let { dashedArrowLine ->
+                        val path = Path()
+                        path.moveTo(dashedArrowLine.start.x, dashedArrowLine.start.y)
+                        path.lineTo(dashedArrowLine.end.x, dashedArrowLine.end.y)
+
+                        drawPath(
+                            path,
+                            color = dashedArrowLine.color,
+                            style = Stroke(
+                                width = 10f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                            ),
+                        )
+
+                        // Calculate arrowhead points
+                        val angle = atan2(
+                            dashedArrowLine.end.y - dashedArrowLine.start.y,
+                            dashedArrowLine.end.x - dashedArrowLine.start.x
+                        )
+                        val arrowPoints = calculateArrowheadPoints(
+                            Offset(
+                                dashedArrowLine.end.x,
+                                dashedArrowLine.end.y
+                            ), angle
+                        )
+
+                        // Draw the arrowhead
+                        drawPath(
+                            arrowPoints,
+                            color = dashedArrowLine.color,
+                            style = Stroke(width = 10f)
+                        )
+                    }
+                }
+
+                dashedArrowLines.forEach { dashedArrowLine ->
+
+                    val path = Path()
+                    path.moveTo(dashedArrowLine.start.x, dashedArrowLine.start.y)
+                    path.lineTo(dashedArrowLine.end.x, dashedArrowLine.end.y)
+
+                    drawPath(
+                        path, color = dashedArrowLine.color,
+                        style = Stroke(
+                            width = 10f,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                        )
+                    ) // Modify stroke width as needed
+
+                    // Calculate arrowhead points
+                    val angle = atan2(
+                        dashedArrowLine.end.y - dashedArrowLine.start.y,
+                        dashedArrowLine.end.x - dashedArrowLine.start.x
+                    )
+                    val arrowPoints = calculateArrowheadPoints(
+                        Offset(
+                            dashedArrowLine.end.x,
+                            dashedArrowLine.end.y
+                        ), angle
+                    )
+
+                    // Draw the arrowhead
+                    drawPath(
+                        arrowPoints,
+                        color = dashedArrowLine.color,
+                        style = Stroke(width = 10f)
+                    )
+                }
+
+                // draw triangle
+                if (drawMode == DrawMode.TriangleDraw){
+                    temporaryTriangle?.let { triangle ->
+                        drawLine(color = Color.Gray, start = triangle.point1, end = triangle.point2, strokeWidth = 10f)
+                        drawLine(color = Color.Gray, start = triangle.point2, end = triangle.point3, strokeWidth = 10f)
+                        drawLine(color = Color.Gray, start = triangle.point3, end = triangle.point1, strokeWidth = 10f)
+                    }
+                }
+
+                triangles.forEach { triangle ->
+                    drawLine(color = triangle.color, start = triangle.point1, end = triangle.point2, strokeWidth = 10f)
+                    drawLine(color = triangle.color, start = triangle.point2, end = triangle.point3, strokeWidth = 10f)
+                    drawLine(color = triangle.color, start = triangle.point3, end = triangle.point1, strokeWidth = 10f)
+                }
+
+                // draw rectangles
+                if (drawMode == DrawMode.RectDraw) {
+                    temporaryRectangle?.let { rectangle ->
+                        drawRect(
+                            color = Color.Gray, // Adjust color for temporary rectangle
+                            topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
+                            size = Size(rectangle.width, rectangle.height),
+                            style = Stroke(10f)
+                        )
+                    }
+                }
+
+                rectangles.forEach { rectangle ->
+                    drawRect(
+                        color = rectangle.color,
+                        topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
+                        size = Size(rectangle.width, rectangle.height),
+                        style = Stroke(10f)
+                    )
+                }
+
+                // draw Round rectangles
+                if (drawMode == DrawMode.RoundRectDraw) {
+                    temporaryRoundRectangle?.let { rectangle ->
+                        drawRoundRect(
+                            color = Color.Gray,
+                            topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
+                            size = Size(rectangle.width, rectangle.height),
+                            style = Stroke(10f),
+                            cornerRadius = CornerRadius(16f, 16f)
+                        )
+                    }
+                }
+
+                roundRectangles.forEach { rectangle ->
+                    drawRoundRect(
+                        color = rectangle.color,
+                        topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
+                        size = Size(rectangle.width, rectangle.height),
+                        style = Stroke(10f),
+                        cornerRadius = CornerRadius(20f, 20f)
                     )
                 }
 
@@ -634,26 +989,84 @@ fun DrawingApp() {
                     )
                 }
 
-                // draw rectangles
-                if (drawMode == DrawMode.RectDraw) {
-                    temporaryRectangle?.let { rectangle ->
-                        drawRect(
-                            color = Color.Gray, // Adjust color for temporary rectangle
-                            topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
-                            size = Size(rectangle.width, rectangle.height),
-                            style = Stroke(10f)
+                // Draw Half circles
+                if (drawMode == DrawMode.HalfCircleDraw) {
+                    temporaryHalfCircle?.let { halfCircle ->
+                        val startAngle = if (halfCircle.isTop) 180f else 0f
+                        val sweepAngle = 180f
+
+                        drawArc(
+                            color = halfCircle.color,
+                            startAngle = startAngle,
+                            sweepAngle = sweepAngle,
+                            useCenter = false,
+                            style = Stroke(width = 5f),
+                            topLeft = Offset(halfCircle.centerX - halfCircle.radius, halfCircle.centerY - halfCircle.radius),
+                            size = Size(halfCircle.radius * 2, halfCircle.radius * 2)
+                        )
+
+                        // Draw the bottom line for the temporary half circle
+                        val startX = halfCircle.centerX - halfCircle.radius
+                        val startY = halfCircle.centerY
+                        val endX = halfCircle.centerX + halfCircle.radius
+                        val endY = startY
+
+                        drawLine(
+                            color = halfCircle.color,
+                            start = Offset(startX, startY),
+                            end = Offset(endX, endY),
+                            strokeWidth = 5f
                         )
                     }
                 }
 
-                rectangles.forEach { rectangle ->
-                    drawRect(
-                        color = rectangle.color,
-                        topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
-                        size = Size(rectangle.width, rectangle.height),
-                        style = Stroke(10f)
+                halfCircles.forEach { halfCircle ->
+                    val startAngle = if (halfCircle.isTop) 180f else 0f
+                    val sweepAngle = 180f
+
+                    drawArc(
+                        color = halfCircle.color,
+                        startAngle = startAngle,
+                        sweepAngle = sweepAngle,
+                        useCenter = false,
+                        style = Stroke(width = 5f),
+                        topLeft = Offset(halfCircle.centerX - halfCircle.radius, halfCircle.centerY - halfCircle.radius),
+                        size = Size(halfCircle.radius * 2, halfCircle.radius * 2)
+                    )
+
+                    // Draw the bottom line
+                    val startX = halfCircle.centerX - halfCircle.radius
+                    val startY = halfCircle.centerY
+                    val endX = halfCircle.centerX + halfCircle.radius
+                    val endY = startY
+
+                    drawLine(
+                        color = halfCircle.color,
+                        start = Offset(startX, startY),
+                        end = Offset(endX, endY),
+                        strokeWidth = 5f
                     )
                 }
+
+                // Draw Octagon
+                if (drawMode == DrawMode.OctagonDraw){
+                    temporaryOctagon?.let { octagon ->
+                        for (i in 0 until octagon.points.size) {
+                            val startPoint = octagon.points[i]
+                            val endPoint = octagon.points[(i + 1) % octagon.points.size]
+                            drawLine(color = Color.Gray, start = startPoint, end = endPoint, strokeWidth = 10f)
+                        }
+                    }
+                }
+
+                octagons.forEach { octagon ->
+                    for (i in 0 until octagon.points.size) {
+                        val startPoint = octagon.points[i]
+                        val endPoint = octagon.points[(i + 1) % octagon.points.size]
+                        drawLine(color = octagon.color, start = startPoint, end = endPoint, strokeWidth = 10f)
+                    }
+                }
+
 
                 paths.forEach {
 
@@ -762,8 +1175,14 @@ fun DrawingApp() {
                 myTable.columnAmount = 0
                 //clear figures
                 lines = emptyList()
-                circles = emptyList()
+                dashedLines = emptyList()
+                arrowLines = emptyList()
+                dashedArrowLines = emptyList()
+                triangles = emptyList()
                 rectangles = emptyList()
+                circles = emptyList()
+                halfCircles = emptyList()
+                octagons = emptyList()
 
             },
             onPathPropertiesChange = {
@@ -848,6 +1267,38 @@ private fun Path.rotate(rotationDegrees: Float) {
     this.asAndroidPath().transform(matrix)
 }
 
+private fun calculateArrowheadPoints(endPoint: Offset, angle: Float): Path {
+    val arrowPath = Path()
+    val arrowLength = 30f // Length of the arrowhead
+    val arrowAngle = 150 // Angle of the arrowhead
+
+    // Calculate the adjusted angle for the arrowhead
+
+
+    val x1 = endPoint.x + arrowLength * cos(angle - Math.toRadians(arrowAngle.toDouble())).toFloat()
+    val y1 = endPoint.y + arrowLength * sin(angle - Math.toRadians(arrowAngle.toDouble())).toFloat()
+
+    val x2 = endPoint.x + arrowLength * cos(angle + Math.toRadians(arrowAngle.toDouble())).toFloat()
+    val y2 = endPoint.y + arrowLength * sin(angle + Math.toRadians(arrowAngle.toDouble())).toFloat()
+
+    arrowPath.moveTo(endPoint.x, endPoint.y)
+    arrowPath.lineTo(x1, y1)
+    arrowPath.moveTo(endPoint.x, endPoint.y)
+    arrowPath.lineTo(x2, y2)
+
+    return arrowPath
+}
+
+// Function to calculate octagon points based on the initial touch point and index
+private fun calculateOctagonPoint(initialPoint: Offset, index: Int): Offset {
+    val angle = index * (360 / 8) // Angle between each point
+    val radius = 100f // Adjust the radius of the octagon as needed
+
+    val x = initialPoint.x + radius * cos(Math.toRadians(angle.toDouble())) // X-coordinate calculation
+    val y = initialPoint.y + radius * sin(Math.toRadians(angle.toDouble())) // Y-coordinate calculation
+
+    return Offset(x.toFloat(), y.toFloat())
+}
 
 private fun DrawScope.drawText(text: String, x: Float, y: Float, paint: Paint) {
 

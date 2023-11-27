@@ -1,22 +1,12 @@
 package com.example.drawingapp2.menu
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Build
 import android.os.CountDownTimer
-import android.provider.MediaStore
-import android.util.Log
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -36,24 +26,18 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,17 +46,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -89,7 +69,6 @@ import com.example.drawingapp2.model.TimeUnit
 import com.example.drawingapp2.ui.theme.Blue400
 import com.godaddy.android.colorpicker.ClassicColorPicker
 import com.godaddy.android.colorpicker.HsvColor
-import java.util.Timer
 
 @Composable
 fun DrawingPropertiesMenu(
@@ -1028,7 +1007,7 @@ fun BackgroundSelectionDialog(
                         modifier = Modifier.size(30.dp)
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.baseline_square_24),
+                            painter = painterResource(R.drawable.figure_square_24),
                             contentDescription = null,
                             tint = firstTint
                         )
@@ -1134,7 +1113,7 @@ fun FigureDialog(
 
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.baseline_horizontal_line_24),
+                            painter = painterResource(R.drawable.figure_line_24),
                             contentDescription = null,
                             tint = Color.LightGray
                         )
@@ -1146,7 +1125,7 @@ fun FigureDialog(
 
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.baseline_linear_scale_24),
+                            painter = painterResource(R.drawable.figure_dash_line_24),
                             contentDescription = null,
                             tint = Color.LightGray
                         )
@@ -1154,10 +1133,23 @@ fun FigureDialog(
 
                     IconButton(onClick = {
                         onDismiss()
-                        onDrawModeChanged(DrawMode.CircleDraw)
+                        onDrawModeChanged(DrawMode.ArrowLineDraw)
+
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.baseline_circle_24),
+                            painter = painterResource(R.drawable.figure_arrow_line_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.DashArrowLineDraw)
+
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_dash_arrow_line_24),
                             contentDescription = null,
                             tint = Color.LightGray
                         )
@@ -1168,11 +1160,67 @@ fun FigureDialog(
                         onDrawModeChanged(DrawMode.RectDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.baseline_square_24),
+                            painter = painterResource(R.drawable.figure_square_24),
                             contentDescription = null,
                             tint = Color.LightGray
                         )
                     }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.RoundRectDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_round_rect_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.CircleDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_circle_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.HalfCircleDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_half_circle_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.TriangleDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_triangle_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.OctagonDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_hexagon_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
                 }
             }
         }
