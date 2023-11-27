@@ -104,6 +104,7 @@ fun DrawingPropertiesMenu(
     onDrawModeChanged: (DrawMode) -> Unit,
     onBgChanged: (Color, Int) -> Unit,
     onDrawTable: (Int, Int) -> Unit,
+    myLauncher: ManagedActivityResultLauncher<String, Uri?>
 ) {
 
     val properties by rememberUpdatedState(newValue = pathProperties)
@@ -118,18 +119,9 @@ fun DrawingPropertiesMenu(
     var showTableDialog by remember { mutableStateOf(false) }
     var showWebDialog by remember { mutableStateOf(false) }
     var showTimerDialog by remember { mutableStateOf(false) }
-    var showMyImage by remember { mutableStateOf(false) }
 
     var currentDrawMode = drawMode
 
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val context = LocalContext.current
-    val bitmap = remember { mutableStateOf<Bitmap?>(null) }
-
-    val launcher =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-            imageUri = uri
-        }
 
     Row(
         modifier = modifier,
@@ -351,10 +343,7 @@ fun DrawingPropertiesMenu(
             openTimerDialog = {
                 showTimerDialog = !showTimerDialog
             },
-            openImageDialog = {
-                showMyImage = !showMyImage
-            },
-            launcher = launcher
+            launcher = myLauncher
         )
     }
 
@@ -377,15 +366,6 @@ fun DrawingPropertiesMenu(
             onShowTimerDialog = {
                 showTimerDialog = !showTimerDialog
             }
-        )
-    }
-
-    if (showMyImage) {
-        ImageDialog(
-            imageUri,
-            context,
-            bitmap,
-            launcher
         )
     }
 
@@ -1205,7 +1185,6 @@ fun FeatureDialog(
     openTableDialog: () -> Unit,
     openWebDialog: () -> Unit,
     openTimerDialog: () -> Unit,
-    openImageDialog: () -> Unit,
     launcher: ManagedActivityResultLauncher<String, Uri?>
 ) {
     Dialog(onDismissRequest = { onDismiss() }) {
@@ -1268,7 +1247,6 @@ fun FeatureDialog(
                     //Image Dialog
                     IconButton(onClick = {
                         onDismiss()
-                        openImageDialog()
                         launcher.launch("image/*")
                     }) {
                         Icon(
@@ -1861,54 +1839,5 @@ fun ScrollableTimer(
             }
         }
     }
-}
-
-@Composable
-fun ImageDialog(
-    imageUri: Uri?,
-    context: Context,
-    bitmap: MutableState<Bitmap?>,
-    launcher: ManagedActivityResultLauncher<String, Uri?>
-    ) {
-
-    var myOffset by remember { mutableStateOf(Offset.Zero) }
-
-    Column(
-        modifier = Modifier.wrapContentSize()
-            .offset(
-                x = (myOffset.x / 3).dp,
-                y = (myOffset.y / 3).dp
-            ) // /3 for speed decreasing
-            .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    myOffset += dragAmount
-                }
-            },
-    ) {
-
-        imageUri?.let {
-            if (Build.VERSION.SDK_INT < 28) {
-                bitmap.value = MediaStore.Images
-                    .Media.getBitmap(context.contentResolver, it)
-            } else {
-                val source = ImageDecoder.createSource(context.contentResolver, it)
-                bitmap.value = ImageDecoder.decodeBitmap(source)
-            }
-
-            bitmap.value?.let { btm ->
-                Image(
-                    bitmap = btm.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        //.size(400.dp)
-                        .wrapContentSize()
-                        .padding(20.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-    }
-
 }
 

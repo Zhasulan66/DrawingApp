@@ -1,11 +1,18 @@
 package com.example.drawingapp2
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.RectF
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -28,9 +35,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
@@ -40,6 +49,8 @@ import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -136,6 +147,14 @@ fun DrawingApp() {
     var bgType by remember { mutableStateOf(0) }
     val myTable by remember { mutableStateOf(Table()) }
 
+    //for image
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val bitmap = remember { mutableStateOf<Bitmap?>(null) }
+    val launcher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
+            imageUri = uri
+        }
+
     // Calculate offsets for centering the table
     var centerX by remember { mutableStateOf(0f) }
     var centerY by remember { mutableStateOf(0f) }
@@ -152,6 +171,8 @@ fun DrawingApp() {
     var myRotation by remember { mutableStateOf(0f) }
 
 
+
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -164,6 +185,7 @@ fun DrawingApp() {
 
         val distanceBetweenLines = 30.dp
 
+        //canvas for bg lines
         Canvas(
             modifier = Modifier
                 .background(currentBackgroundColor)
@@ -251,7 +273,7 @@ fun DrawingApp() {
                         tableLines = emptyList()
                         tableLines = updatedTableLines*/
                         // Calculate the desired number of lines based on the current scale
-                        val desiredLineCount = myTable.rowAmount /2 // + myTable.columnAmount
+                        val desiredLineCount = myTable.rowAmount / 2 // + myTable.columnAmount
                         val currentLineCount = tableLines.size
 
                         // Remove lines if needed
@@ -297,10 +319,9 @@ fun DrawingApp() {
                             // Apply the zoom transformation to the new path
                             originalPath.zoom(scale)
                             //originalPath.rotate(myRotation)
-                            if(scale > 1) {
+                            if (scale > 1) {
                                 pathProperties.strokeWidth += scale * 3
-                            }
-                            else {
+                            } else {
                                 pathProperties.strokeWidth -= scale * 3
                             }
                         }
@@ -320,7 +341,7 @@ fun DrawingApp() {
                             }
                         }
 
-                        if(myTable.tableZoom > 1) {
+                        if (myTable.tableZoom > 1) {
                             myTable.tableScale = 100f + myTable.tableZoom * 10
                             myTable.strokeWidth = 4.dp + (myTable.tableZoom).toInt().dp
                             //tableLines[tableLines.size - 2]
@@ -344,10 +365,6 @@ fun DrawingApp() {
                     rotationZ = myRotation
                 })*/
         ) {
-
-            // Calculate offsets for centering the table
-            //centerX = (size.width) / 2 - (myTable.columnAmount / 2 * myTable.tableScale)
-            //centerY = (size.height) / 2 - (myTable.rowAmount / 2 * myTable.tableScale)
 
             when (motionEvent) {
 
@@ -465,7 +482,7 @@ fun DrawingApp() {
                     if (drawMode == DrawMode.DashLineDraw) {
 
                         // Drawing dashed lines
-                        temporaryDashedLine?.let { dashedLine  ->
+                        temporaryDashedLine?.let { dashedLine ->
                             dashedLines = dashedLines + dashedLine
                         }
 
@@ -516,13 +533,33 @@ fun DrawingApp() {
 
 
             with(drawContext.canvas.nativeCanvas) {
+
+                imageUri?.let {
+                    if (Build.VERSION.SDK_INT < 28) {  //28
+                        bitmap.value = MediaStore.Images
+                            .Media.getBitmap(context.contentResolver, it)
+                    } else {
+                        val source = ImageDecoder.createSource(context.contentResolver, it)
+                        bitmap.value = ImageDecoder.decodeBitmap(source)
+                    }
+
+                    bitmap.value?.let { btm ->
+                        drawImage(
+                            image = btm.asImageBitmap(),
+                            dstOffset  = IntOffset(x = centerX.toInt(), y = centerY.toInt()),
+                            dstSize  = IntSize(btm.width, btm.height),
+                        )
+                    }
+                }
+
                 if (myTable.rowAmount != 0 && myTable.columnAmount != 0) {
                     tableLines.forEach { (x, y) ->
                         drawLine(
                             color = myTable.color,
                             start = Offset(x, y),
                             end = if (x == centerX) Offset(
-                                centerX + myTable.columnAmount * myTable.tableScale, y)
+                                centerX + myTable.columnAmount * myTable.tableScale, y
+                            )
                             else Offset(x, centerY + myTable.rowAmount * myTable.tableScale),
                             strokeWidth = myTable.strokeWidth.toPx(),
                             cap = StrokeCap.Square
@@ -650,8 +687,6 @@ fun DrawingApp() {
                 }
 
 
-
-
                 if (motionEvent != MotionEvent.Idle) {
 
                     if (!currentPathProperty.eraseMode) {
@@ -680,27 +715,6 @@ fun DrawingApp() {
                 restoreToCount(checkPoint)
             }
 
-            // 🔥🔥 This is for debugging
-//            canvasText.clear()
-//
-//            paths.forEach {
-//                val path = it.first
-//                val property = it.second
-//
-//                canvasText.append(
-//                    "pHash: ${path.hashCode()}, " +
-//                            "propHash: ${property.hashCode()}, " +
-//                            "Mode: ${property.eraseMode}\n"
-//                )
-//            }
-//
-//            canvasText.append(
-//                "🔥 pHash: ${currentPath.hashCode()}, " +
-//                        "propHash: ${currentPathProperty.hashCode()}, " +
-//                        "Mode: ${currentPathProperty.eraseMode}\n"
-//            )
-//
-//            drawText(text = canvasText.toString(), x = 0f, y = 60f, paint)
         }
 
 
@@ -773,7 +787,8 @@ fun DrawingApp() {
                 myTable.tableZoom = 1f
                 myTable.rowAmount = rowInt
                 myTable.columnAmount = columnInt
-            }
+            },
+            myLauncher = launcher
 
         )
     }
