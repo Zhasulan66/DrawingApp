@@ -1157,6 +1157,42 @@ fun FigureDialog(
 
                     IconButton(onClick = {
                         onDismiss()
+                        onDrawModeChanged(DrawMode.TriangleDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_triangle_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.ParallelogramDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_parallelogram_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.TrapezoidDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_trapezoid_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+                }
+
+                Row{
+
+                    IconButton(onClick = {
+                        onDismiss()
                         onDrawModeChanged(DrawMode.RectDraw)
                     }) {
                         Icon(
@@ -1201,10 +1237,10 @@ fun FigureDialog(
 
                     IconButton(onClick = {
                         onDismiss()
-                        onDrawModeChanged(DrawMode.TriangleDraw)
+                        onDrawModeChanged(DrawMode.OctagonDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_triangle_24),
+                            painter = painterResource(R.drawable.figure_hexagon_24),
                             contentDescription = null,
                             tint = Color.LightGray
                         )
@@ -1212,10 +1248,21 @@ fun FigureDialog(
 
                     IconButton(onClick = {
                         onDismiss()
-                        onDrawModeChanged(DrawMode.OctagonDraw)
+                        onDrawModeChanged(DrawMode.CylinderDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_hexagon_24),
+                            painter = painterResource(R.drawable.figure_cylinder_24),
+                            contentDescription = null,
+                            tint = Color.LightGray
+                        )
+                    }
+
+                    IconButton(onClick = {
+                        onDismiss()
+                        onDrawModeChanged(DrawMode.StarDraw)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_star_24),
                             contentDescription = null,
                             tint = Color.LightGray
                         )

@@ -6,7 +6,6 @@ import android.graphics.ImageDecoder
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PointF
-import android.graphics.Rect
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
@@ -34,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
@@ -51,6 +51,7 @@ import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -61,18 +62,23 @@ import com.example.drawingapp2.gesture.MotionEvent
 import com.example.drawingapp2.gesture.dragMotionEvent
 import com.example.drawingapp2.menu.DrawingPropertiesMenu
 import com.example.drawingapp2.model.Circle
+import com.example.drawingapp2.model.Cylinder
 import com.example.drawingapp2.model.HalfCircle
 import com.example.drawingapp2.model.Line
 import com.example.drawingapp2.model.Octagon
+import com.example.drawingapp2.model.Parallelogram
 import com.example.drawingapp2.model.PathProperties
 import com.example.drawingapp2.model.Rectangle
+import com.example.drawingapp2.model.Star
 import com.example.drawingapp2.model.Table
+import com.example.drawingapp2.model.Trapezoid
 import com.example.drawingapp2.model.Triangle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -155,6 +161,14 @@ fun DrawingApp() {
     var triangles by remember { mutableStateOf(emptyList<Triangle>()) }
     var temporaryTriangle by remember { mutableStateOf<Triangle?>(null) }
 
+    //parallelogram drawing
+    var parallelograms by remember { mutableStateOf(emptyList<Parallelogram>()) }
+    var temporaryParallelogram by remember { mutableStateOf<Parallelogram?>(null) }
+
+    //trapezoid drawing
+    var trapezoids by remember { mutableStateOf(emptyList<Trapezoid>()) }
+    var temporaryTrapezoid by remember { mutableStateOf<Trapezoid?>(null) }
+
     //rect drawing
     var rectangles by rememberSaveable { mutableStateOf(emptyList<Rectangle>()) }
     var temporaryRectangle by mutableStateOf<Rectangle?>(null)
@@ -171,8 +185,17 @@ fun DrawingApp() {
     var halfCircles by remember { mutableStateOf(emptyList<HalfCircle>()) }
     var temporaryHalfCircle by remember { mutableStateOf<HalfCircle?>(null) }
 
+    //octagon drawing
     var octagons by remember { mutableStateOf(emptyList<Octagon>()) }
     var temporaryOctagon by remember { mutableStateOf<Octagon?>(null) }
+
+    //cylinder drawing
+    var cylinders by remember { mutableStateOf(emptyList<Cylinder>()) }
+    var temporaryCylinder by remember { mutableStateOf<Cylinder?>(null) }
+
+    //star drawing
+    var stars by remember { mutableStateOf(emptyList<Star>()) }
+    var temporaryStar by remember { mutableStateOf<Star?>(null) }
 
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
@@ -397,7 +420,6 @@ fun DrawingApp() {
         ) {
 
             //motion events
-
             when (motionEvent) {
 
                 MotionEvent.Down -> {
@@ -438,7 +460,26 @@ fun DrawingApp() {
                     }
 
                     if (drawMode == DrawMode.TriangleDraw) {
-                        temporaryTriangle = Triangle(currentPosition, currentPosition, currentPosition, currentPathProperty.color)
+                        temporaryTriangle = Triangle(
+                            currentPosition,
+                            currentPosition,
+                            currentPosition,
+                            currentPathProperty.color
+                        )
+                    }
+
+                    if (drawMode == DrawMode.ParallelogramDraw) {
+                        temporaryParallelogram = Parallelogram(
+                            points = mutableListOf(currentPosition, currentPosition, currentPosition, currentPosition),
+                            color = currentPathProperty.color
+                        )
+                    }
+
+                    if (drawMode == DrawMode.TrapezoidDraw) {
+                        temporaryTrapezoid = Trapezoid(
+                            points = mutableListOf(currentPosition, currentPosition, currentPosition, currentPosition),
+                            color = currentPathProperty.color
+                        )
                     }
 
                     if (drawMode == DrawMode.RectDraw) {
@@ -470,11 +511,35 @@ fun DrawingApp() {
 
                     if (drawMode == DrawMode.HalfCircleDraw) {
                         initialTouchPoint = currentPosition
-                        temporaryHalfCircle = HalfCircle(currentPosition.x, currentPosition.y, 0f, currentPathProperty.color, true)
+                        temporaryHalfCircle = HalfCircle(
+                            currentPosition.x,
+                            currentPosition.y,
+                            0f,
+                            currentPathProperty.color,
+                            true
+                        )
                     }
 
                     if (drawMode == DrawMode.OctagonDraw) {
-                        temporaryOctagon = Octagon(List(8) { currentPosition }.toMutableList(), currentPathProperty.color)
+                        temporaryOctagon = Octagon(currentPosition, 50f, currentPathProperty.color)
+                    }
+
+                    if (drawMode == DrawMode.CylinderDraw) {
+                        temporaryCylinder = Cylinder(
+                            center = Offset(currentPosition.x, currentPosition.y),
+                            ovalRadiusX = 100f, // Initial oval radius X
+                            ovalRadiusY = 50f, // Initial oval radius Y
+                            color = currentPathProperty.color
+                        )
+                    }
+
+                    if (drawMode == DrawMode.StarDraw) {
+                        temporaryStar = Star(
+                            center = Offset(currentPosition.x, currentPosition.y),
+                            radius = 100f, // Initial radius
+                            numPoints = 5, // Number of points in the star
+                            color = currentPathProperty.color
+                        )
                     }
 
                     previousPosition = currentPosition
@@ -513,6 +578,24 @@ fun DrawingApp() {
                         temporaryTriangle?.let { triangle ->
                             triangle.point2 = currentPosition
                             triangle.point3 = Offset(currentPosition.x, triangle.point1.y)
+                        }
+                    }
+
+                    if (drawMode == DrawMode.ParallelogramDraw) {
+                        temporaryParallelogram?.let { parallelogram ->
+                            parallelogram.points[1] = Offset(currentPosition.x, currentPosition.y)
+                            parallelogram.points[2] = Offset(parallelogram.points[0].x + (parallelogram.points[1].x - parallelogram.points[0].x)/2, parallelogram.points[1].y)
+                            parallelogram.points[3] =
+                                Offset(parallelogram.points[2].x,
+                                    parallelogram.points[0].y)
+                        }
+                    }
+
+                    if (drawMode == DrawMode.TrapezoidDraw) {
+                        temporaryTrapezoid?.let { trapezoid ->
+                            trapezoid.points[1] = Offset(currentPosition.x, trapezoid.points[0].y)
+                            trapezoid.points[2] = Offset(trapezoid.points[0].x + (currentPosition.x - trapezoid.points[0].x) * 0.6f, currentPosition.y)
+                            trapezoid.points[3] = Offset(trapezoid.points[0].x + (currentPosition.x - trapezoid.points[0].x) * 0.4f, currentPosition.y)
                         }
                     }
 
@@ -569,9 +652,33 @@ fun DrawingApp() {
 
                     if (drawMode == DrawMode.OctagonDraw) {
                         temporaryOctagon?.let { octagon ->
-                            octagon.points.forEachIndexed { index, _ ->
-                                octagon.points[index] = calculateOctagonPoint(currentPosition, index)
-                            }
+                            val deltaY = currentPosition.y - octagon.center.y
+                            octagon.radius = abs(deltaY)
+                        }
+                    }
+
+                    if (drawMode == DrawMode.CylinderDraw) {
+                        temporaryCylinder?.let { cylinder ->
+                            val newOvalRadiusX = max(20f, currentPosition.x - cylinder.center.x)
+                            val newOvalRadiusY = max(10f, currentPosition.y - cylinder.center.y)
+                            temporaryCylinder = Cylinder(
+                                center = cylinder.center,
+                                ovalRadiusX = newOvalRadiusX,
+                                ovalRadiusY = newOvalRadiusY,
+                                color = cylinder.color
+                            )
+                        }
+                    }
+
+                    if (drawMode == DrawMode.StarDraw) {
+                        temporaryStar?.let { star ->
+                            val newRadius = max(10f, currentPosition.y - star.center.y)
+                            temporaryStar = Star(
+                                center = star.center,
+                                radius = newRadius,
+                                numPoints = star.numPoints,
+                                color = star.color
+                            )
                         }
                     }
 
@@ -642,6 +749,18 @@ fun DrawingApp() {
                         }
                     }
 
+                    if (drawMode == DrawMode.ParallelogramDraw) {
+                        temporaryParallelogram?.let { parallelogram ->
+                            parallelograms = parallelograms + parallelogram
+                        }
+                    }
+
+                    if (drawMode == DrawMode.TrapezoidDraw) {
+                        temporaryTrapezoid?.let { trapezoid ->
+                            trapezoids = trapezoids + trapezoid
+                        }
+                    }
+
                     if (drawMode == DrawMode.RectDraw) {
                         // Touch released, add the final version of the rectangle to the list
                         temporaryRectangle?.let { rectangle ->
@@ -675,16 +794,32 @@ fun DrawingApp() {
                         }
                     }
 
+                    if (drawMode == DrawMode.CylinderDraw) {
+                        temporaryCylinder?.let { cylinder ->
+                            cylinders = cylinders + cylinder
+                        }
+                    }
+
+                    if (drawMode == DrawMode.StarDraw) {
+                        temporaryStar?.let { star ->
+                            stars = stars + star
+                        }
+                    }
+
                     temporaryLine = null
                     temporaryDashedLine = null
                     temporaryArrowLine = null
                     temporaryDashedArrowLine = null
                     temporaryTriangle = null
+                    temporaryParallelogram = null
+                    temporaryTrapezoid = null
                     temporaryRectangle = null
                     temporaryRoundRectangle = null
                     temporaryCircle = null
                     temporaryHalfCircle = null
                     temporaryOctagon = null
+                    temporaryCylinder = null
+                    temporaryStar = null
 
                     // Since new path is drawn no need to store paths to undone
                     pathsUndone.clear()
@@ -801,7 +936,7 @@ fun DrawingApp() {
                         path.moveTo(arrowLine.start.x, arrowLine.start.y)
                         path.lineTo(arrowLine.end.x, arrowLine.end.y)
 
-                        drawPath(path, color = arrowLine.color, style = Stroke(width = 10f))
+                        drawPath(path, color = arrowLine.color, style = Stroke(width = 10f, cap = StrokeCap.Round))
 
                         // Calculate arrowhead points
                         val angle = atan2(
@@ -814,7 +949,7 @@ fun DrawingApp() {
                         )
 
                         // Draw the arrowhead
-                        drawPath(arrowPoints, color = arrowLine.color, style = Stroke(width = 10f))
+                        drawPath(arrowPoints, color = arrowLine.color, style = Stroke(width = 10f, cap = StrokeCap.Round))
                     }
                 }
 
@@ -824,7 +959,7 @@ fun DrawingApp() {
                     path.moveTo(arrowLine.start.x, arrowLine.start.y)
                     path.lineTo(arrowLine.end.x, arrowLine.end.y)
 
-                    drawPath(path, color = arrowLine.color, style = Stroke(width = 10f))
+                    drawPath(path, color = arrowLine.color, style = Stroke(width = 10f, cap = StrokeCap.Round))
 
                     // Calculate arrowhead points
                     val angle = atan2(
@@ -835,7 +970,7 @@ fun DrawingApp() {
                         calculateArrowheadPoints(Offset(arrowLine.end.x, arrowLine.end.y), angle)
 
                     // Draw the arrowhead
-                    drawPath(arrowPoints, color = arrowLine.color, style = Stroke(width = 10f))
+                    drawPath(arrowPoints, color = arrowLine.color, style = Stroke(width = 10f, cap = StrokeCap.Round))
                 }
 
                 // Drawing Dashed Arrow lines
@@ -850,7 +985,8 @@ fun DrawingApp() {
                             color = dashedArrowLine.color,
                             style = Stroke(
                                 width = 10f,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f),
+                                cap = StrokeCap.Round
                             ),
                         )
 
@@ -870,7 +1006,7 @@ fun DrawingApp() {
                         drawPath(
                             arrowPoints,
                             color = dashedArrowLine.color,
-                            style = Stroke(width = 10f)
+                            style = Stroke(width = 10f, cap = StrokeCap.Round)
                         )
                     }
                 }
@@ -885,7 +1021,8 @@ fun DrawingApp() {
                         path, color = dashedArrowLine.color,
                         style = Stroke(
                             width = 10f,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f),
+                            cap = StrokeCap.Round
                         )
                     ) // Modify stroke width as needed
 
@@ -905,23 +1042,193 @@ fun DrawingApp() {
                     drawPath(
                         arrowPoints,
                         color = dashedArrowLine.color,
-                        style = Stroke(width = 10f)
+                        style = Stroke(width = 10f, cap = StrokeCap.Round)
                     )
                 }
 
                 // draw triangle
-                if (drawMode == DrawMode.TriangleDraw){
+                if (drawMode == DrawMode.TriangleDraw) {
                     temporaryTriangle?.let { triangle ->
-                        drawLine(color = Color.Gray, start = triangle.point1, end = triangle.point2, strokeWidth = 10f)
-                        drawLine(color = Color.Gray, start = triangle.point2, end = triangle.point3, strokeWidth = 10f)
-                        drawLine(color = Color.Gray, start = triangle.point3, end = triangle.point1, strokeWidth = 10f)
+                        drawLine(
+                            color = Color.Gray,
+                            start = triangle.point1,
+                            end = triangle.point2,
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = Color.Gray,
+                            start = triangle.point2,
+                            end = triangle.point3,
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = Color.Gray,
+                            start = triangle.point3,
+                            end = triangle.point1,
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
                     }
                 }
 
                 triangles.forEach { triangle ->
-                    drawLine(color = triangle.color, start = triangle.point1, end = triangle.point2, strokeWidth = 10f)
-                    drawLine(color = triangle.color, start = triangle.point2, end = triangle.point3, strokeWidth = 10f)
-                    drawLine(color = triangle.color, start = triangle.point3, end = triangle.point1, strokeWidth = 10f)
+                    drawLine(
+                        color = triangle.color,
+                        start = triangle.point1,
+                        end = triangle.point2,
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = triangle.color,
+                        start = triangle.point2,
+                        end = triangle.point3,
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = triangle.color,
+                        start = triangle.point3,
+                        end = triangle.point1,
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                }
+
+                //draw parallelogram
+                if (drawMode == DrawMode.ParallelogramDraw){
+                    temporaryParallelogram?.let { parallelogram ->
+                        val points = parallelogram.points
+                        drawLine(
+                            color = parallelogram.color,
+                            start = points[0],
+                            end = points[2],
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = parallelogram.color,
+                            start = points[2],
+                            end = points[1],
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = parallelogram.color,
+                            start = points[1],
+                            end = points[3],
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = parallelogram.color,
+                            start = points[3],
+                            end = points[0],
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+
+                parallelograms.forEach { parallelogram ->
+                    val points = parallelogram.points
+                    drawLine(
+                        color = parallelogram.color,
+                        start = points[0],
+                        end = points[2],
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = parallelogram.color,
+                        start = points[2],
+                        end = points[1],
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = parallelogram.color,
+                        start = points[1],
+                        end = points[3],
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = parallelogram.color,
+                        start = points[3],
+                        end = points[0],
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                }
+
+                //draw trapezoid
+                if (drawMode == DrawMode.TrapezoidDraw){
+                    temporaryTrapezoid?.let { trapezoid ->
+                        val points = trapezoid.points
+                        drawLine(
+                            color = Color.Gray,
+                            start = points[0],
+                            end = points[1],
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = Color.Gray,
+                            start = points[1],
+                            end = points[2],
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = Color.Gray,
+                            start = points[2],
+                            end = points[3],
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            color = Color.Gray,
+                            start = points[3],
+                            end = points[0],
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+
+                trapezoids.forEach { trapezoid ->
+                    val points = trapezoid.points
+                    drawLine(
+                        color = trapezoid.color,
+                        start = points[0],
+                        end = points[1],
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = trapezoid.color,
+                        start = points[1],
+                        end = points[2],
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = trapezoid.color,
+                        start = points[2],
+                        end = points[3],
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = trapezoid.color,
+                        start = points[3],
+                        end = points[0],
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
+                    )
                 }
 
                 // draw rectangles
@@ -1000,8 +1307,11 @@ fun DrawingApp() {
                             startAngle = startAngle,
                             sweepAngle = sweepAngle,
                             useCenter = false,
-                            style = Stroke(width = 5f),
-                            topLeft = Offset(halfCircle.centerX - halfCircle.radius, halfCircle.centerY - halfCircle.radius),
+                            style = Stroke(width = 10f, cap = StrokeCap.Round),
+                            topLeft = Offset(
+                                halfCircle.centerX - halfCircle.radius,
+                                halfCircle.centerY - halfCircle.radius
+                            ),
                             size = Size(halfCircle.radius * 2, halfCircle.radius * 2)
                         )
 
@@ -1015,7 +1325,8 @@ fun DrawingApp() {
                             color = halfCircle.color,
                             start = Offset(startX, startY),
                             end = Offset(endX, endY),
-                            strokeWidth = 5f
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
                         )
                     }
                 }
@@ -1029,8 +1340,11 @@ fun DrawingApp() {
                         startAngle = startAngle,
                         sweepAngle = sweepAngle,
                         useCenter = false,
-                        style = Stroke(width = 5f),
-                        topLeft = Offset(halfCircle.centerX - halfCircle.radius, halfCircle.centerY - halfCircle.radius),
+                        style = Stroke(width = 10f, cap = StrokeCap.Round),
+                        topLeft = Offset(
+                            halfCircle.centerX - halfCircle.radius,
+                            halfCircle.centerY - halfCircle.radius
+                        ),
                         size = Size(halfCircle.radius * 2, halfCircle.radius * 2)
                     )
 
@@ -1044,27 +1358,104 @@ fun DrawingApp() {
                         color = halfCircle.color,
                         start = Offset(startX, startY),
                         end = Offset(endX, endY),
-                        strokeWidth = 5f
+                        strokeWidth = 10f,
+                        cap = StrokeCap.Round
                     )
                 }
 
                 // Draw Octagon
-                if (drawMode == DrawMode.OctagonDraw){
+                if (drawMode == DrawMode.OctagonDraw) {
                     temporaryOctagon?.let { octagon ->
-                        for (i in 0 until octagon.points.size) {
-                            val startPoint = octagon.points[i]
-                            val endPoint = octagon.points[(i + 1) % octagon.points.size]
-                            drawLine(color = Color.Gray, start = startPoint, end = endPoint, strokeWidth = 10f)
+                        val points = mutableListOf<Offset>()
+
+                        val angleOffset = Math.PI / 8 // Angle offset to keep the top side flat
+
+                        for (i in 0 until 8) {
+                            val angle = Math.PI / 4 * i + angleOffset
+                            val x = octagon.center.x + octagon.radius * cos(angle).toFloat()
+                            val y = octagon.center.y + octagon.radius * sin(angle).toFloat()
+                            points.add(Offset(x, y))
+                        }
+
+                        for (i in 0 until points.size) {
+                            drawLine(
+                                color = octagon.color,
+                                start = points[i],
+                                end = points[(i + 1) % points.size],
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
                         }
                     }
                 }
 
                 octagons.forEach { octagon ->
-                    for (i in 0 until octagon.points.size) {
-                        val startPoint = octagon.points[i]
-                        val endPoint = octagon.points[(i + 1) % octagon.points.size]
-                        drawLine(color = octagon.color, start = startPoint, end = endPoint, strokeWidth = 10f)
+                    val points = mutableListOf<Offset>()
+
+                    val angleOffset = Math.PI / 8 // Angle offset to keep the top side flat
+
+                    for (i in 0 until 8) {
+                        val angle = Math.PI / 4 * i + angleOffset
+                        val x = octagon.center.x + octagon.radius * cos(angle).toFloat()
+                        val y = octagon.center.y + octagon.radius * sin(angle).toFloat()
+                        points.add(Offset(x, y))
                     }
+
+                    for (i in 0 until points.size) {
+                        drawLine(
+                            color = octagon.color,
+                            start = points[i],
+                            end = points[(i + 1) % points.size],
+                            strokeWidth = 10f,
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+
+                // Draw Cylinder
+                if(drawMode == DrawMode.CylinderDraw) {
+                    temporaryCylinder?.let { cylinder ->
+                        drawCylinder(
+                            centerX = cylinder.center.x,
+                            centerY = cylinder.center.y,
+                            ovalRadiusX = cylinder.ovalRadiusX,
+                            ovalRadiusY = cylinder.ovalRadiusY,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                cylinders.forEach { cylinder ->
+                    drawCylinder(
+                        centerX = cylinder.center.x,
+                        centerY = cylinder.center.y,
+                        ovalRadiusX = cylinder.ovalRadiusX,
+                        ovalRadiusY = cylinder.ovalRadiusY,
+                        color = cylinder.color
+                    )
+                }
+
+                // Draw Star
+                if (drawMode == DrawMode.StarDraw){
+                    temporaryStar?.let { star ->
+                        drawStar(
+                            centerX = star.center.x,
+                            centerY = star.center.y,
+                            radius = star.radius,
+                            numPoints = star.numPoints,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                stars.forEach { star ->
+                    drawStar(
+                        centerX = star.center.x,
+                        centerY = star.center.y,
+                        radius = star.radius,
+                        numPoints = star.numPoints,
+                        color = star.color
+                    )
                 }
 
 
@@ -1179,10 +1570,15 @@ fun DrawingApp() {
                 arrowLines = emptyList()
                 dashedArrowLines = emptyList()
                 triangles = emptyList()
+                parallelograms = emptyList()
+                trapezoids = emptyList()
                 rectangles = emptyList()
+                roundRectangles = emptyList()
                 circles = emptyList()
                 halfCircles = emptyList()
                 octagons = emptyList()
+                cylinders = emptyList()
+                stars = emptyList()
 
             },
             onPathPropertiesChange = {
@@ -1289,15 +1685,73 @@ private fun calculateArrowheadPoints(endPoint: Offset, angle: Float): Path {
     return arrowPath
 }
 
-// Function to calculate octagon points based on the initial touch point and index
-private fun calculateOctagonPoint(initialPoint: Offset, index: Int): Offset {
-    val angle = index * (360 / 8) // Angle between each point
-    val radius = 100f // Adjust the radius of the octagon as needed
+fun DrawScope.drawCylinder(centerX: Float, centerY: Float, ovalRadiusX: Float, ovalRadiusY: Float, color: Color) {
 
-    val x = initialPoint.x + radius * cos(Math.toRadians(angle.toDouble())) // X-coordinate calculation
-    val y = initialPoint.y + radius * sin(Math.toRadians(angle.toDouble())) // Y-coordinate calculation
+    // Draw the oval top
+    drawOval(color = color, topLeft = Offset(centerX - ovalRadiusX, centerY - ovalRadiusY),
+        size = Size(ovalRadiusX * 2, ovalRadiusY * 2), style = Stroke(10f)
+    )
 
-    return Offset(x.toFloat(), y.toFloat())
+    // Calculate points for lines at the sides of the oval
+    val startPointLeft = Offset(centerX - ovalRadiusX, centerY)
+    val endPointLeft = Offset(centerX - ovalRadiusX, centerY + ovalRadiusY * 3.5f)
+
+    val startPointRight = Offset(centerX + ovalRadiusX, centerY)
+    val endPointRight = Offset(centerX + ovalRadiusX, centerY + ovalRadiusY * 3.5f)
+
+    // Draw lines down from the oval
+    drawLine(color, startPointLeft, endPointLeft, strokeWidth = 10f,cap = StrokeCap.Round)
+    drawLine(color, startPointRight, endPointRight, strokeWidth = 10f, cap = StrokeCap.Round)
+
+
+    val arcRect = Rect(
+        topLeft = Offset(centerX - ovalRadiusX, centerY + ovalRadiusY * 3),
+        bottomRight = Offset(centerX + ovalRadiusX, centerY + ovalRadiusY * 3 + ovalRadiusY)
+    )
+
+    // Draw the arc connecting the lines
+    val path = Path().apply {
+
+        arcTo(rect = arcRect, startAngleDegrees = 0f, sweepAngleDegrees = 180f, forceMoveTo = false)
+    }
+    drawPath(path, color = color, style = Stroke(10f, cap = StrokeCap.Round))
+}
+fun DrawScope.drawStar(centerX: Float, centerY: Float, radius: Float, numPoints: Int, color: Color) {
+    val outerAngle = 2 * PI / numPoints // Angle between each outer point
+    val halfAngle = PI / numPoints // Half the angle between the points of the star
+
+    val points = mutableListOf<Offset>()
+
+    var currentAngle = -PI / 2 // Start from the top
+
+    repeat(numPoints * 2) { i ->
+        val currentRadius = if (i % 2 == 0) radius else radius / 2 // Alternating between outer and inner points
+        val x = centerX + (currentRadius * cos(currentAngle)).toFloat()
+        val y = centerY + (currentRadius * sin(currentAngle)).toFloat()
+
+        points.add(Offset(x, y))
+
+        currentAngle += if (i % 2 == 0) halfAngle else outerAngle - halfAngle
+    }
+
+    // Draw lines between the points to form the star
+    repeat(numPoints * 2 - 1) { i ->
+        drawLine(
+            color = color,
+            start = points[i],
+            end = points[i + 1],
+            strokeWidth = 10f,
+            cap = StrokeCap.Round
+        )
+    }
+
+    drawLine(
+        color = color,
+        start = points.last(),
+        end = points.first(),
+        strokeWidth = 10f,
+        cap = StrokeCap.Round
+    )
 }
 
 private fun DrawScope.drawText(text: String, x: Float, y: Float, paint: Paint) {
