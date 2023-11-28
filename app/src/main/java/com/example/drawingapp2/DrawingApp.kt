@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.asImageBitmap
@@ -51,7 +52,6 @@ import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -227,7 +227,7 @@ fun DrawingApp() {
 
     var initialTouchPoint by mutableStateOf(Offset.Zero)
 
-
+    var myPath by remember { mutableStateOf(Path()) }
 
 
     Box(
@@ -323,20 +323,12 @@ fun DrawingApp() {
                             path.translate(change)
                         }
 
-                        /*val updatedTableLines = tableLines.map { (x, y) ->
-                            Pair(x + currentPosition.x, y + currentPosition.y)
-                        }
 
-                        tableLines = emptyList()
-                        tableLines = updatedTableLines*/
-                        // Calculate the desired number of lines based on the current scale
-                        val desiredLineCount = myTable.rowAmount / 2 // + myTable.columnAmount
                         val currentLineCount = tableLines.size
 
                         // Remove lines if needed
-                        if (currentLineCount > desiredLineCount) {
-                            val linesToRemove = currentLineCount - desiredLineCount
-                            tableLines = tableLines.drop(linesToRemove)
+                        if (currentLineCount > 0) {
+                            tableLines = tableLines.drop(currentLineCount)
 
                             // Trigger recomposition
                             Modifier.onGloballyPositioned { coordinates ->
@@ -383,15 +375,12 @@ fun DrawingApp() {
                             }
                         }
 
-                        // Calculate the desired number of lines based on the current scale
-                        val desiredLineCount =
-                            myTable.rowAmount + myTable.columnAmount - 10 // extra lines while dragging to delete
+
                         val currentLineCount = tableLines.size
 
                         // Remove lines if needed
-                        if (currentLineCount > desiredLineCount) {
-                            val linesToRemove = currentLineCount - desiredLineCount
-                            tableLines = tableLines.drop(linesToRemove)
+                        if (currentLineCount > 0) {
+                            tableLines = tableLines.drop(currentLineCount)
 
                             // Trigger recomposition
                             Modifier.onGloballyPositioned { coordinates ->
@@ -408,12 +397,9 @@ fun DrawingApp() {
                             myTable.tableScale = 100f - myTable.tableZoom * 10
                             //myTable.strokeWidth = 4.dp - (scale).toInt().dp
                         }
-                        //scale = 1f
                     }
                 }
             )
-
-
 
         Canvas(
             modifier = drawModifier
@@ -1489,6 +1475,8 @@ fun DrawingApp() {
                         )
                     }
                 }
+
+                //Path.combine(PathOperation.Intersect, paths[0].first, paths[1].first)
 
 
                 if (motionEvent != MotionEvent.Idle) {

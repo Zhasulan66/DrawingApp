@@ -360,7 +360,7 @@ fun EraserSelectionDialog(
 
     var strokeWidth by remember { mutableStateOf(pathOption.strokeWidth) }
 
-    Dialog(onDismissRequest = { onDismiss() }) {
+    //Dialog(onDismissRequest = { onDismiss() }) {
 
         Card(
             //elevation = 2.dp,
@@ -442,7 +442,7 @@ fun EraserSelectionDialog(
 
             }
         }
-    }
+    //}
 }
 
 @Composable
