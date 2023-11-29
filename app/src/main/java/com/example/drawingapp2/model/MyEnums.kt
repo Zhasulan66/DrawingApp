@@ -5,3 +5,10 @@ enum class TimeUnit {
     MINUTES,
     SECONDS
 }
+
+enum class LineType {
+    REGULAR,
+    DASHED,
+    ARROW,
+    DASHED_ARROW
+}

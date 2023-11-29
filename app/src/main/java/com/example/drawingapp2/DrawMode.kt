@@ -6,6 +6,6 @@ enum class DrawMode {
     DashArrowLineDraw, RectDraw, RoundRectDraw,
     CircleDraw, HalfCircleDraw, TriangleDraw,
     OctagonDraw, ParallelogramDraw, TrapezoidDraw,
-    StarDraw, CylinderDraw
+    StarDraw, CylinderDraw, Selection
 
 }

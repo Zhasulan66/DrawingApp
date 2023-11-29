@@ -157,6 +157,23 @@ fun DrawingPropertiesMenu(
 
         Box(
             modifier = Modifier
+                .background(if(currentDrawMode == DrawMode.Selection) Color.Black else Color.Gray)
+                .padding(horizontal = 10.dp)
+        ) {
+            IconButton(onClick = {
+                currentDrawMode = DrawMode.Selection
+                onDrawModeChanged(currentDrawMode)
+
+            }) {
+                Icon(
+                    painter = painterResource(id = R.drawable.baseline_fit_screen_24),
+                    contentDescription = null, tint = Color.LightGray
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
                 .background(Color.Gray)
                 .padding(horizontal = 10.dp)
         ) {
@@ -167,7 +184,7 @@ fun DrawingPropertiesMenu(
 
             }) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_brush_black_24),
+                    painter = painterResource(id = R.drawable.ic_brush_black_24),//selection
                     contentDescription = null, tint = Color.LightGray
                 )
             }

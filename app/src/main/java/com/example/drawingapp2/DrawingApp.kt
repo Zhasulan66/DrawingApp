@@ -39,11 +39,11 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -61,18 +61,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.drawingapp2.gesture.MotionEvent
 import com.example.drawingapp2.gesture.dragMotionEvent
 import com.example.drawingapp2.menu.DrawingPropertiesMenu
-import com.example.drawingapp2.model.Circle
-import com.example.drawingapp2.model.Cylinder
-import com.example.drawingapp2.model.HalfCircle
-import com.example.drawingapp2.model.Line
-import com.example.drawingapp2.model.Octagon
-import com.example.drawingapp2.model.Parallelogram
-import com.example.drawingapp2.model.PathProperties
-import com.example.drawingapp2.model.Rectangle
-import com.example.drawingapp2.model.Star
-import com.example.drawingapp2.model.Table
-import com.example.drawingapp2.model.Trapezoid
-import com.example.drawingapp2.model.Triangle
+import com.example.drawingapp2.model.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -141,61 +130,32 @@ fun DrawingApp() {
      */
     var currentPathProperty by remember { mutableStateOf(PathProperties()) }
 
-    //line drawing
-    var lines by rememberSaveable { mutableStateOf(emptyList<Line>()) }
+    //temporaries for figures
     var temporaryLine by mutableStateOf<Line?>(null)
-
-    //dashed Line drawing
-    var dashedLines by rememberSaveable { mutableStateOf(emptyList<Line>()) }
     var temporaryDashedLine by mutableStateOf<Line?>(null)
-
-    //line with arrow drawing
-    var arrowLines by rememberSaveable { mutableStateOf(emptyList<Line>()) }
     var temporaryArrowLine by mutableStateOf<Line?>(null)
-
-    //dashed line with arrow drawing
-    var dashedArrowLines by rememberSaveable { mutableStateOf(emptyList<Line>()) }
     var temporaryDashedArrowLine by mutableStateOf<Line?>(null)
-
-    //triangle drawing
-    var triangles by remember { mutableStateOf(emptyList<Triangle>()) }
     var temporaryTriangle by remember { mutableStateOf<Triangle?>(null) }
-
-    //parallelogram drawing
-    var parallelograms by remember { mutableStateOf(emptyList<Parallelogram>()) }
     var temporaryParallelogram by remember { mutableStateOf<Parallelogram?>(null) }
-
-    //trapezoid drawing
-    var trapezoids by remember { mutableStateOf(emptyList<Trapezoid>()) }
     var temporaryTrapezoid by remember { mutableStateOf<Trapezoid?>(null) }
-
-    //rect drawing
-    var rectangles by rememberSaveable { mutableStateOf(emptyList<Rectangle>()) }
     var temporaryRectangle by mutableStateOf<Rectangle?>(null)
-
-    // round rect drawing
-    var roundRectangles by rememberSaveable { mutableStateOf(emptyList<Rectangle>()) }
-    var temporaryRoundRectangle by mutableStateOf<Rectangle?>(null)
-
-    //circle drawing
-    var circles by rememberSaveable { mutableStateOf(emptyList<Circle>()) }
+    var temporaryRoundRectangle by mutableStateOf<RoundRectangle?>(null)
     var temporaryCircle by mutableStateOf<Circle?>(null)
-
-    // Half circle drawing
-    var halfCircles by remember { mutableStateOf(emptyList<HalfCircle>()) }
     var temporaryHalfCircle by remember { mutableStateOf<HalfCircle?>(null) }
-
-    //octagon drawing
-    var octagons by remember { mutableStateOf(emptyList<Octagon>()) }
     var temporaryOctagon by remember { mutableStateOf<Octagon?>(null) }
-
-    //cylinder drawing
-    var cylinders by remember { mutableStateOf(emptyList<Cylinder>()) }
     var temporaryCylinder by remember { mutableStateOf<Cylinder?>(null) }
-
-    //star drawing
-    var stars by remember { mutableStateOf(emptyList<Star>()) }
     var temporaryStar by remember { mutableStateOf<Star?>(null) }
+
+    //list for all figures
+    var figures by remember { mutableStateOf(emptyList<Figure>()) }
+
+    //selection rect
+    var selectionRectangle by mutableStateOf<Rectangle?>(null)
+    var showSelectionIcons by remember { mutableStateOf(false) }
+
+    var deleteSelectedBtnRect by remember { mutableStateOf(Rect(Offset(0f, 0f), Size(0f, 0f))) }
+    //path for selection
+    var selectionPath by remember { mutableStateOf(Path()) }
 
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
@@ -227,7 +187,6 @@ fun DrawingApp() {
 
     var initialTouchPoint by mutableStateOf(Offset.Zero)
 
-    var myPath by remember { mutableStateOf(Path()) }
 
 
     Box(
@@ -425,7 +384,8 @@ fun DrawingApp() {
                         temporaryDashedLine = Line(
                             PointF(currentPosition.x, currentPosition.y),
                             PointF(currentPosition.x, currentPosition.y),
-                            color = currentPathProperty.color
+                            color = currentPathProperty.color,
+                            type = LineType.DASHED
                         )
                     }
 
@@ -433,7 +393,8 @@ fun DrawingApp() {
                         temporaryArrowLine = Line(
                             PointF(currentPosition.x, currentPosition.y),
                             PointF(currentPosition.x, currentPosition.y),
-                            color = currentPathProperty.color
+                            color = currentPathProperty.color,
+                            type = LineType.ARROW
                         )
                     }
 
@@ -441,7 +402,8 @@ fun DrawingApp() {
                         temporaryDashedArrowLine = Line(
                             PointF(currentPosition.x, currentPosition.y),
                             PointF(currentPosition.x, currentPosition.y),
-                            color = currentPathProperty.color
+                            color = currentPathProperty.color,
+                            type = LineType.DASHED_ARROW
                         )
                     }
 
@@ -456,14 +418,24 @@ fun DrawingApp() {
 
                     if (drawMode == DrawMode.ParallelogramDraw) {
                         temporaryParallelogram = Parallelogram(
-                            points = mutableListOf(currentPosition, currentPosition, currentPosition, currentPosition),
+                            points = mutableListOf(
+                                currentPosition,
+                                currentPosition,
+                                currentPosition,
+                                currentPosition
+                            ),
                             color = currentPathProperty.color
                         )
                     }
 
                     if (drawMode == DrawMode.TrapezoidDraw) {
                         temporaryTrapezoid = Trapezoid(
-                            points = mutableListOf(currentPosition, currentPosition, currentPosition, currentPosition),
+                            points = mutableListOf(
+                                currentPosition,
+                                currentPosition,
+                                currentPosition,
+                                currentPosition
+                            ),
                             color = currentPathProperty.color
                         )
                     }
@@ -481,7 +453,7 @@ fun DrawingApp() {
 
                     if (drawMode == DrawMode.RoundRectDraw) {
                         initialTouchPoint = currentPosition
-                        temporaryRoundRectangle = Rectangle(
+                        temporaryRoundRectangle = RoundRectangle(
                             PointF(currentPosition.x, currentPosition.y),
                             0f,
                             0f,
@@ -528,6 +500,19 @@ fun DrawingApp() {
                         )
                     }
 
+                    if (drawMode == DrawMode.Selection) {
+                        // selection rect
+                        selectionPath.moveTo(currentPosition.x, currentPosition.y)
+                        initialTouchPoint = currentPosition
+                        selectionRectangle = Rectangle(
+                            PointF(currentPosition.x, currentPosition.y),
+                            0f,
+                            0f,
+                            Color.Red
+                        )
+                        showSelectionIcons = false
+                    }
+
                     previousPosition = currentPosition
 
                 }
@@ -570,18 +555,29 @@ fun DrawingApp() {
                     if (drawMode == DrawMode.ParallelogramDraw) {
                         temporaryParallelogram?.let { parallelogram ->
                             parallelogram.points[1] = Offset(currentPosition.x, currentPosition.y)
-                            parallelogram.points[2] = Offset(parallelogram.points[0].x + (parallelogram.points[1].x - parallelogram.points[0].x)/2, parallelogram.points[1].y)
+                            parallelogram.points[2] = Offset(
+                                parallelogram.points[0].x + (parallelogram.points[1].x - parallelogram.points[0].x) / 2,
+                                parallelogram.points[1].y
+                            )
                             parallelogram.points[3] =
-                                Offset(parallelogram.points[2].x,
-                                    parallelogram.points[0].y)
+                                Offset(
+                                    parallelogram.points[2].x,
+                                    parallelogram.points[0].y
+                                )
                         }
                     }
 
                     if (drawMode == DrawMode.TrapezoidDraw) {
                         temporaryTrapezoid?.let { trapezoid ->
                             trapezoid.points[1] = Offset(currentPosition.x, trapezoid.points[0].y)
-                            trapezoid.points[2] = Offset(trapezoid.points[0].x + (currentPosition.x - trapezoid.points[0].x) * 0.6f, currentPosition.y)
-                            trapezoid.points[3] = Offset(trapezoid.points[0].x + (currentPosition.x - trapezoid.points[0].x) * 0.4f, currentPosition.y)
+                            trapezoid.points[2] = Offset(
+                                trapezoid.points[0].x + (currentPosition.x - trapezoid.points[0].x) * 0.6f,
+                                currentPosition.y
+                            )
+                            trapezoid.points[3] = Offset(
+                                trapezoid.points[0].x + (currentPosition.x - trapezoid.points[0].x) * 0.4f,
+                                currentPosition.y
+                            )
                         }
                     }
 
@@ -668,6 +664,28 @@ fun DrawingApp() {
                         }
                     }
 
+                    if (drawMode == DrawMode.Selection) {
+                        // Update the size of the temporary rectangle as the user drags
+                        selectionPath.quadraticBezierTo(
+                            previousPosition.x,
+                            previousPosition.y,
+                            (previousPosition.x + currentPosition.x) / 2,
+                            (previousPosition.y + currentPosition.y) / 2
+                        )
+
+                        /*val left = min(initialTouchPoint.x, currentPosition.x)
+                        val top = min(initialTouchPoint.y, currentPosition.y)
+                        val right = max(initialTouchPoint.x, currentPosition.x)
+                        val bottom = max(initialTouchPoint.y, currentPosition.y)
+
+                        selectionRectangle?.let { rectangle ->
+                            rectangle.leftTop.x = left
+                            rectangle.leftTop.y = top
+                            rectangle.width = right - left
+                            rectangle.height = bottom - top
+                        }*/
+                    }
+
                     previousPosition = currentPosition
                 }
 
@@ -683,6 +701,7 @@ fun DrawingApp() {
                         // and have separate path for each down-move-up gesture cycle
                         currentPath = Path()
 
+
                         // Create new instance of path properties to have new path and properties
                         // only for the one currently being drawn
                         currentPathProperty = PathProperties(
@@ -697,7 +716,7 @@ fun DrawingApp() {
                     if (drawMode == DrawMode.LineDraw) {
                         // Touch released, add the line to the list
                         temporaryLine?.let { line ->
-                            lines = lines + line
+                            figures = figures + line
                         }
 
                     }
@@ -706,7 +725,7 @@ fun DrawingApp() {
 
                         // Drawing dashed lines
                         temporaryDashedLine?.let { dashedLine ->
-                            dashedLines = dashedLines + dashedLine
+                            figures = figures + dashedLine
                         }
 
                     }
@@ -715,7 +734,7 @@ fun DrawingApp() {
 
                         // Drawing arrow lines
                         temporaryArrowLine?.let { arrowLine ->
-                            arrowLines = arrowLines + arrowLine
+                            figures = figures + arrowLine
                         }
 
                     }
@@ -724,73 +743,276 @@ fun DrawingApp() {
 
                         // Drawing arrow lines
                         temporaryDashedArrowLine?.let { dashedArrowLine ->
-                            dashedArrowLines = dashedArrowLines + dashedArrowLine
+                            figures = figures + dashedArrowLine
                         }
 
                     }
 
                     if (drawMode == DrawMode.TriangleDraw) {
                         temporaryTriangle?.let { triangle ->
-                            triangles = triangles + triangle
+                            figures = figures + triangle
                         }
                     }
 
                     if (drawMode == DrawMode.ParallelogramDraw) {
                         temporaryParallelogram?.let { parallelogram ->
-                            parallelograms = parallelograms + parallelogram
+                            figures = figures + parallelogram
                         }
                     }
 
                     if (drawMode == DrawMode.TrapezoidDraw) {
                         temporaryTrapezoid?.let { trapezoid ->
-                            trapezoids = trapezoids + trapezoid
+                            figures = figures + trapezoid
                         }
                     }
 
                     if (drawMode == DrawMode.RectDraw) {
                         // Touch released, add the final version of the rectangle to the list
                         temporaryRectangle?.let { rectangle ->
-                            rectangles = rectangles + rectangle
+                            figures = figures + rectangle
                         }
                     }
 
                     if (drawMode == DrawMode.RoundRectDraw) {
                         // Touch released, add the final version of the rectangle to the list
                         temporaryRoundRectangle?.let { rectangle ->
-                            roundRectangles = roundRectangles + rectangle
+                            figures = figures + rectangle
                         }
                     }
 
                     if (drawMode == DrawMode.CircleDraw) {
                         // Touch released, add the final version of the circle to the list
                         temporaryCircle?.let { circle ->
-                            circles = circles + circle
+                            figures = figures + circle
                         }
                     }
 
                     if (drawMode == DrawMode.HalfCircleDraw) {
                         temporaryHalfCircle?.let { halfCircle ->
-                            halfCircles = halfCircles + halfCircle
+                            figures = figures + halfCircle
                         }
                     }
 
                     if (drawMode == DrawMode.OctagonDraw) {
                         temporaryOctagon?.let { octagon ->
-                            octagons = octagons + octagon
+                            figures = figures + octagon
                         }
                     }
 
                     if (drawMode == DrawMode.CylinderDraw) {
                         temporaryCylinder?.let { cylinder ->
-                            cylinders = cylinders + cylinder
+                            figures = figures + cylinder
                         }
                     }
 
                     if (drawMode == DrawMode.StarDraw) {
                         temporaryStar?.let { star ->
-                            stars = stars + star
+                            figures = figures + star
                         }
                     }
+
+
+                    if (drawMode == DrawMode.Selection) {
+                        selectionPath.lineTo(currentPosition.x, currentPosition.y)
+                        val (left, top, right, bottom) = selectionPath.getBounds()
+                        /*val myRect = Rect(
+                            Offset(selectionRectangle!!.leftTop.x, selectionRectangle!!.leftTop.y),
+                            Size(selectionRectangle!!.width, selectionRectangle!!.height)
+                        )*/
+                        val myRect = Rect(left, top, right, bottom)
+                        selectionRectangle?.let { rectangle ->
+                            rectangle.leftTop.x = left
+                            rectangle.leftTop.y = top
+                            rectangle.width = right - left
+                            rectangle.height = bottom - top
+                        }
+                        selectionPath = Path()
+                        //figure selection
+                        figures.forEach { figure ->
+                            when (figure) {
+                                is Line -> {
+                                    when(figure.type){
+                                        LineType.DASHED -> {
+                                            if (myRect.contains(
+                                                    Offset(
+                                                        figure.start.x,
+                                                        figure.start.y
+                                                    )
+                                                )
+                                            ) {
+                                                figure.isSelected = true
+                                            }
+                                        }
+                                        LineType.ARROW -> {
+                                            if (myRect.contains(
+                                                    Offset(
+                                                        figure.start.x,
+                                                        figure.start.y
+                                                    )
+                                                )
+                                            ) {
+                                                figure.isSelected = true
+                                            }
+                                        }
+                                        LineType.DASHED_ARROW -> {
+                                            if (myRect.contains(
+                                                    Offset(
+                                                        figure.start.x,
+                                                        figure.start.y
+                                                    )
+                                                )
+                                            ) {
+                                                figure.isSelected = true
+                                            }
+                                        }
+                                        else -> { //LineType.REGULAR
+                                            if (myRect.contains(
+                                                    Offset(
+                                                        figure.start.x,
+                                                        figure.start.y
+                                                    )
+                                                )
+                                            ) {
+                                                figure.isSelected = true
+                                            }
+                                        }
+                                    }
+
+                                }
+
+                                is Triangle -> {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.point1.x,
+                                                figure.point1.y
+                                            )
+                                        )
+                                    ) {
+                                        figure.isSelected = true
+                                    }
+                                }
+
+                                is Parallelogram -> {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.points[0].x,
+                                                figure.points[0].y
+                                            )
+                                        )
+                                    ) {
+                                        figure.isSelected = true
+                                    }
+                                }
+
+                                is Trapezoid -> {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.points[0].x,
+                                                figure.points[0].y
+                                            )
+                                        )
+                                    ) {
+                                        figure.isSelected = true
+                                    }
+                                }
+
+                                is Rectangle -> {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.leftTop.x,
+                                                figure.leftTop.y
+                                            )
+                                        )
+                                    ) {
+                                        figure.isSelected = true
+                                    }
+
+                                }
+
+                                is RoundRectangle -> {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.leftTop.x,
+                                                figure.leftTop.y
+                                            )
+                                        )
+                                    ) {
+                                        figure.isSelected = true
+                                    }
+
+                                }
+
+                                is Circle -> {
+                                    if (myRect.contains(Offset(figure.center.x, figure.center.y))) {
+                                        figure.isSelected = true
+                                    }
+                                }
+
+                                is HalfCircle -> {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.centerX,
+                                                figure.centerY
+                                            )
+                                        )
+                                    ) {
+                                        figure.isSelected = true
+                                    }
+                                }
+
+                                is Octagon -> {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.center.x,
+                                                figure.center.y
+                                            )
+                                        )
+                                    ) {
+                                        figure.isSelected = true
+                                    }
+                                }
+
+                                is Cylinder -> {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.center.x,
+                                                figure.center.y
+                                            )
+                                        )
+                                    ) {
+                                        figure.isSelected = true
+                                    }
+                                }
+
+                                is Star -> {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.center.x,
+                                                figure.center.y
+                                            )
+                                        )
+                                    ) {
+                                        figure.isSelected = true
+                                    }
+                                }
+                            }
+                        }
+                        if (deleteSelectedBtnRect.contains(
+                                Offset(
+                                    currentPosition.x,
+                                    currentPosition.y
+                                )
+                            )
+                        ) {
+                            figures.forEach { figure ->
+                                if (figure.isSelected) {
+                                    figures = figures - figure
+                                }
+                            }
+                        }
+                    }
+
+                    showSelectionIcons = drawMode == DrawMode.Selection
 
                     temporaryLine = null
                     temporaryDashedLine = null
@@ -820,20 +1042,20 @@ fun DrawingApp() {
                 else -> Unit
             }
 
+            //table filling
             for (i in 0 until myTable.rowAmount + 1) {
                 val y = i * myTable.tableScale + centerY
                 tableLines = tableLines + Pair(centerX, y)
             }
-
             for (i in 0 until myTable.columnAmount + 1) {
                 val x = i * myTable.tableScale + centerX
                 tableLines = tableLines + Pair(x - 0.1f, centerY)
             }
 
 
-
             with(drawContext.canvas.nativeCanvas) {
 
+                //image drawing
                 imageUri?.let {
                     if (Build.VERSION.SDK_INT < 28) {  //28
                         bitmap.value = MediaStore.Images
@@ -852,6 +1074,7 @@ fun DrawingApp() {
                     }
                 }
 
+                //table drawing
                 if (myTable.rowAmount != 0 && myTable.columnAmount != 0) {
                     tableLines.forEach { (x, y) ->
                         drawLine(
@@ -865,11 +1088,289 @@ fun DrawingApp() {
                             cap = StrokeCap.Square
                         )
                     }
-
-
                 }
 
                 val checkPoint = saveLayer(null, null)
+
+                //draw figures
+                figures.forEach { figure ->
+                    when (figure) {
+                        is Line -> {
+                            when(figure.type){
+                                LineType.DASHED -> {
+                                    drawLine(
+                                        color = figure.color,
+                                        start = Offset(figure.start.x, figure.start.y),
+                                        end = Offset(figure.end.x, figure.end.y),
+                                        strokeWidth = 10f,
+                                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                                    )
+                                }
+                                LineType.ARROW -> {
+                                    val path = Path()
+                                    path.moveTo(figure.start.x, figure.start.y)
+                                    path.lineTo(figure.end.x, figure.end.y)
+
+                                    drawPath(
+                                        path,
+                                        color = figure.color,
+                                        style = Stroke(width = 10f, cap = StrokeCap.Round)
+                                    )
+
+                                    // Calculate arrowhead points
+                                    val angle = atan2(
+                                        figure.end.y - figure.start.y,
+                                        figure.end.x - figure.start.x
+                                    )
+                                    val arrowPoints =
+                                        calculateArrowheadPoints(Offset(figure.end.x, figure.end.y), angle)
+
+                                    // Draw the arrowhead
+                                    drawPath(
+                                        arrowPoints,
+                                        color = figure.color,
+                                        style = Stroke(width = 10f, cap = StrokeCap.Round)
+                                    )
+                                }
+                                LineType.DASHED_ARROW -> {
+                                    val path = Path()
+                                    path.moveTo(figure.start.x, figure.start.y)
+                                    path.lineTo(figure.end.x, figure.end.y)
+
+                                    drawPath(
+                                        path, color = figure.color,
+                                        style = Stroke(
+                                            width = 10f,
+                                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f),
+                                            cap = StrokeCap.Round
+                                        )
+                                    ) // Modify stroke width as needed
+
+                                    // Calculate arrowhead points
+                                    val angle = atan2(
+                                        figure.end.y - figure.start.y,
+                                        figure.end.x - figure.start.x
+                                    )
+                                    val arrowPoints = calculateArrowheadPoints(
+                                        Offset(
+                                            figure.end.x,
+                                            figure.end.y
+                                        ), angle
+                                    )
+
+                                    // Draw the arrowhead
+                                    drawPath(
+                                        arrowPoints,
+                                        color = figure.color,
+                                        style = Stroke(width = 10f, cap = StrokeCap.Round)
+                                    )
+                                }
+                                else -> { //LineType.REGULAR
+                                    drawLine(
+                                        color = figure.color,
+                                        start = Offset(figure.start.x, figure.start.y),
+                                        end = Offset(figure.end.x, figure.end.y),
+                                        strokeWidth = 10f
+                                    )
+                                }
+                            }
+
+                        }
+
+                        is Triangle -> {
+                            drawLine(
+                                color = figure.color,
+                                start = figure.point1,
+                                end = figure.point2,
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                            drawLine(
+                                color = figure.color,
+                                start = figure.point2,
+                                end = figure.point3,
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                            drawLine(
+                                color = figure.color,
+                                start = figure.point3,
+                                end = figure.point1,
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                        }
+
+                        is Parallelogram -> {
+                            val points = figure.points
+                            drawLine(
+                                color = figure.color,
+                                start = points[0],
+                                end = points[2],
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                            drawLine(
+                                color = figure.color,
+                                start = points[2],
+                                end = points[1],
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                            drawLine(
+                                color = figure.color,
+                                start = points[1],
+                                end = points[3],
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                            drawLine(
+                                color = figure.color,
+                                start = points[3],
+                                end = points[0],
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                        }
+
+                        is Trapezoid -> {
+                            val points = figure.points
+                            drawLine(
+                                color = figure.color,
+                                start = points[0],
+                                end = points[1],
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                            drawLine(
+                                color = figure.color,
+                                start = points[1],
+                                end = points[2],
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                            drawLine(
+                                color = figure.color,
+                                start = points[2],
+                                end = points[3],
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                            drawLine(
+                                color = figure.color,
+                                start = points[3],
+                                end = points[0],
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                        }
+
+                        is Rectangle -> {
+                            drawRect(
+                                color = figure.color,
+                                topLeft = Offset(figure.leftTop.x, figure.leftTop.y),
+                                size = Size(figure.width, figure.height),
+                                style = Stroke(10f)
+                            )
+
+                        }
+
+                        is RoundRectangle -> {
+                            drawRoundRect(
+                                color = figure.color,
+                                topLeft = Offset(figure.leftTop.x, figure.leftTop.y),
+                                size = Size(figure.width, figure.height),
+                                style = Stroke(10f),
+                                cornerRadius = CornerRadius(20f, 20f)
+                            )
+
+                        }
+
+                        is Circle -> {
+                            drawCircle(
+                                color = figure.color,
+                                center = Offset(figure.center.x, figure.center.y),
+                                radius = figure.radius,
+                                style = Stroke(10f)
+                            )
+                        }
+
+                        is HalfCircle -> {
+                            val startAngle = if (figure.isTop) 180f else 0f
+                            val sweepAngle = 180f
+
+                            drawArc(
+                                color = figure.color,
+                                startAngle = startAngle,
+                                sweepAngle = sweepAngle,
+                                useCenter = false,
+                                style = Stroke(width = 10f, cap = StrokeCap.Round),
+                                topLeft = Offset(
+                                    figure.centerX - figure.radius,
+                                    figure.centerY - figure.radius
+                                ),
+                                size = Size(figure.radius * 2, figure.radius * 2)
+                            )
+
+                            // Draw the bottom line
+                            val startX = figure.centerX - figure.radius
+                            val startY = figure.centerY
+                            val endX = figure.centerX + figure.radius
+                            val endY = startY
+
+                            drawLine(
+                                color = figure.color,
+                                start = Offset(startX, startY),
+                                end = Offset(endX, endY),
+                                strokeWidth = 10f,
+                                cap = StrokeCap.Round
+                            )
+                        }
+
+                        is Octagon -> {
+                            val points = mutableListOf<Offset>()
+
+                            val angleOffset = Math.PI / 8 // Angle offset to keep the top side flat
+
+                            for (i in 0 until 8) {
+                                val angle = Math.PI / 4 * i + angleOffset
+                                val x = figure.center.x + figure.radius * cos(angle).toFloat()
+                                val y = figure.center.y + figure.radius * sin(angle).toFloat()
+                                points.add(Offset(x, y))
+                            }
+
+                            for (i in 0 until points.size) {
+                                drawLine(
+                                    color = figure.color,
+                                    start = points[i],
+                                    end = points[(i + 1) % points.size],
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                            }
+                        }
+
+                        is Cylinder -> {
+                            drawCylinder(
+                                centerX = figure.center.x,
+                                centerY = figure.center.y,
+                                ovalRadiusX = figure.ovalRadiusX,
+                                ovalRadiusY = figure.ovalRadiusY,
+                                color = figure.color
+                            )
+                        }
+
+                        is Star -> {
+                            drawStar(
+                                centerX = figure.center.x,
+                                centerY = figure.center.y,
+                                radius = figure.radius,
+                                numPoints = figure.numPoints,
+                                color = figure.color
+                            )
+                        }
+                    }
+                }
 
                 //draw lines
                 if (drawMode == DrawMode.LineDraw) {
@@ -881,15 +1382,6 @@ fun DrawingApp() {
                             strokeWidth = 10f
                         )
                     }
-                }
-
-                lines.forEach { line ->
-                    drawLine(
-                        color = line.color,
-                        start = Offset(line.start.x, line.start.y),
-                        end = Offset(line.end.x, line.end.y),
-                        strokeWidth = 10f
-                    )
                 }
 
                 // Drawing dashed lines
@@ -905,16 +1397,6 @@ fun DrawingApp() {
                     }
                 }
 
-                dashedLines.forEach { dashedLine ->
-                    drawLine(
-                        color = dashedLine.color,
-                        start = Offset(dashedLine.start.x, dashedLine.start.y),
-                        end = Offset(dashedLine.end.x, dashedLine.end.y),
-                        strokeWidth = 10f,
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
-                    )
-                }
-
                 // Drawing Arrow lines
                 if (drawMode == DrawMode.ArrowLineDraw) {
                     temporaryArrowLine?.let { arrowLine ->
@@ -922,7 +1404,11 @@ fun DrawingApp() {
                         path.moveTo(arrowLine.start.x, arrowLine.start.y)
                         path.lineTo(arrowLine.end.x, arrowLine.end.y)
 
-                        drawPath(path, color = arrowLine.color, style = Stroke(width = 10f, cap = StrokeCap.Round))
+                        drawPath(
+                            path,
+                            color = arrowLine.color,
+                            style = Stroke(width = 10f, cap = StrokeCap.Round)
+                        )
 
                         // Calculate arrowhead points
                         val angle = atan2(
@@ -935,28 +1421,12 @@ fun DrawingApp() {
                         )
 
                         // Draw the arrowhead
-                        drawPath(arrowPoints, color = arrowLine.color, style = Stroke(width = 10f, cap = StrokeCap.Round))
+                        drawPath(
+                            arrowPoints,
+                            color = arrowLine.color,
+                            style = Stroke(width = 10f, cap = StrokeCap.Round)
+                        )
                     }
-                }
-
-                arrowLines.forEach { arrowLine ->
-
-                    val path = Path()
-                    path.moveTo(arrowLine.start.x, arrowLine.start.y)
-                    path.lineTo(arrowLine.end.x, arrowLine.end.y)
-
-                    drawPath(path, color = arrowLine.color, style = Stroke(width = 10f, cap = StrokeCap.Round))
-
-                    // Calculate arrowhead points
-                    val angle = atan2(
-                        arrowLine.end.y - arrowLine.start.y,
-                        arrowLine.end.x - arrowLine.start.x
-                    )
-                    val arrowPoints =
-                        calculateArrowheadPoints(Offset(arrowLine.end.x, arrowLine.end.y), angle)
-
-                    // Draw the arrowhead
-                    drawPath(arrowPoints, color = arrowLine.color, style = Stroke(width = 10f, cap = StrokeCap.Round))
                 }
 
                 // Drawing Dashed Arrow lines
@@ -997,41 +1467,6 @@ fun DrawingApp() {
                     }
                 }
 
-                dashedArrowLines.forEach { dashedArrowLine ->
-
-                    val path = Path()
-                    path.moveTo(dashedArrowLine.start.x, dashedArrowLine.start.y)
-                    path.lineTo(dashedArrowLine.end.x, dashedArrowLine.end.y)
-
-                    drawPath(
-                        path, color = dashedArrowLine.color,
-                        style = Stroke(
-                            width = 10f,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f),
-                            cap = StrokeCap.Round
-                        )
-                    ) // Modify stroke width as needed
-
-                    // Calculate arrowhead points
-                    val angle = atan2(
-                        dashedArrowLine.end.y - dashedArrowLine.start.y,
-                        dashedArrowLine.end.x - dashedArrowLine.start.x
-                    )
-                    val arrowPoints = calculateArrowheadPoints(
-                        Offset(
-                            dashedArrowLine.end.x,
-                            dashedArrowLine.end.y
-                        ), angle
-                    )
-
-                    // Draw the arrowhead
-                    drawPath(
-                        arrowPoints,
-                        color = dashedArrowLine.color,
-                        style = Stroke(width = 10f, cap = StrokeCap.Round)
-                    )
-                }
-
                 // draw triangle
                 if (drawMode == DrawMode.TriangleDraw) {
                     temporaryTriangle?.let { triangle ->
@@ -1059,32 +1494,8 @@ fun DrawingApp() {
                     }
                 }
 
-                triangles.forEach { triangle ->
-                    drawLine(
-                        color = triangle.color,
-                        start = triangle.point1,
-                        end = triangle.point2,
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = triangle.color,
-                        start = triangle.point2,
-                        end = triangle.point3,
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = triangle.color,
-                        start = triangle.point3,
-                        end = triangle.point1,
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                }
-
                 //draw parallelogram
-                if (drawMode == DrawMode.ParallelogramDraw){
+                if (drawMode == DrawMode.ParallelogramDraw) {
                     temporaryParallelogram?.let { parallelogram ->
                         val points = parallelogram.points
                         drawLine(
@@ -1118,40 +1529,8 @@ fun DrawingApp() {
                     }
                 }
 
-                parallelograms.forEach { parallelogram ->
-                    val points = parallelogram.points
-                    drawLine(
-                        color = parallelogram.color,
-                        start = points[0],
-                        end = points[2],
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = parallelogram.color,
-                        start = points[2],
-                        end = points[1],
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = parallelogram.color,
-                        start = points[1],
-                        end = points[3],
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = parallelogram.color,
-                        start = points[3],
-                        end = points[0],
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                }
-
                 //draw trapezoid
-                if (drawMode == DrawMode.TrapezoidDraw){
+                if (drawMode == DrawMode.TrapezoidDraw) {
                     temporaryTrapezoid?.let { trapezoid ->
                         val points = trapezoid.points
                         drawLine(
@@ -1185,38 +1564,6 @@ fun DrawingApp() {
                     }
                 }
 
-                trapezoids.forEach { trapezoid ->
-                    val points = trapezoid.points
-                    drawLine(
-                        color = trapezoid.color,
-                        start = points[0],
-                        end = points[1],
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = trapezoid.color,
-                        start = points[1],
-                        end = points[2],
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = trapezoid.color,
-                        start = points[2],
-                        end = points[3],
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                    drawLine(
-                        color = trapezoid.color,
-                        start = points[3],
-                        end = points[0],
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                }
-
                 // draw rectangles
                 if (drawMode == DrawMode.RectDraw) {
                     temporaryRectangle?.let { rectangle ->
@@ -1227,15 +1574,6 @@ fun DrawingApp() {
                             style = Stroke(10f)
                         )
                     }
-                }
-
-                rectangles.forEach { rectangle ->
-                    drawRect(
-                        color = rectangle.color,
-                        topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
-                        size = Size(rectangle.width, rectangle.height),
-                        style = Stroke(10f)
-                    )
                 }
 
                 // draw Round rectangles
@@ -1251,16 +1589,6 @@ fun DrawingApp() {
                     }
                 }
 
-                roundRectangles.forEach { rectangle ->
-                    drawRoundRect(
-                        color = rectangle.color,
-                        topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
-                        size = Size(rectangle.width, rectangle.height),
-                        style = Stroke(10f),
-                        cornerRadius = CornerRadius(20f, 20f)
-                    )
-                }
-
                 // draw circles
                 if (drawMode == DrawMode.CircleDraw) {
                     temporaryCircle?.let { circle ->
@@ -1271,15 +1599,6 @@ fun DrawingApp() {
                             style = Stroke(10f)
                         )
                     }
-                }
-
-                circles.forEach { circle ->
-                    drawCircle(
-                        color = circle.color,
-                        center = Offset(circle.center.x, circle.center.y),
-                        radius = circle.radius,
-                        style = Stroke(10f)
-                    )
                 }
 
                 // Draw Half circles
@@ -1317,38 +1636,6 @@ fun DrawingApp() {
                     }
                 }
 
-                halfCircles.forEach { halfCircle ->
-                    val startAngle = if (halfCircle.isTop) 180f else 0f
-                    val sweepAngle = 180f
-
-                    drawArc(
-                        color = halfCircle.color,
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        useCenter = false,
-                        style = Stroke(width = 10f, cap = StrokeCap.Round),
-                        topLeft = Offset(
-                            halfCircle.centerX - halfCircle.radius,
-                            halfCircle.centerY - halfCircle.radius
-                        ),
-                        size = Size(halfCircle.radius * 2, halfCircle.radius * 2)
-                    )
-
-                    // Draw the bottom line
-                    val startX = halfCircle.centerX - halfCircle.radius
-                    val startY = halfCircle.centerY
-                    val endX = halfCircle.centerX + halfCircle.radius
-                    val endY = startY
-
-                    drawLine(
-                        color = halfCircle.color,
-                        start = Offset(startX, startY),
-                        end = Offset(endX, endY),
-                        strokeWidth = 10f,
-                        cap = StrokeCap.Round
-                    )
-                }
-
                 // Draw Octagon
                 if (drawMode == DrawMode.OctagonDraw) {
                     temporaryOctagon?.let { octagon ->
@@ -1375,31 +1662,8 @@ fun DrawingApp() {
                     }
                 }
 
-                octagons.forEach { octagon ->
-                    val points = mutableListOf<Offset>()
-
-                    val angleOffset = Math.PI / 8 // Angle offset to keep the top side flat
-
-                    for (i in 0 until 8) {
-                        val angle = Math.PI / 4 * i + angleOffset
-                        val x = octagon.center.x + octagon.radius * cos(angle).toFloat()
-                        val y = octagon.center.y + octagon.radius * sin(angle).toFloat()
-                        points.add(Offset(x, y))
-                    }
-
-                    for (i in 0 until points.size) {
-                        drawLine(
-                            color = octagon.color,
-                            start = points[i],
-                            end = points[(i + 1) % points.size],
-                            strokeWidth = 10f,
-                            cap = StrokeCap.Round
-                        )
-                    }
-                }
-
                 // Draw Cylinder
-                if(drawMode == DrawMode.CylinderDraw) {
+                if (drawMode == DrawMode.CylinderDraw) {
                     temporaryCylinder?.let { cylinder ->
                         drawCylinder(
                             centerX = cylinder.center.x,
@@ -1411,18 +1675,8 @@ fun DrawingApp() {
                     }
                 }
 
-                cylinders.forEach { cylinder ->
-                    drawCylinder(
-                        centerX = cylinder.center.x,
-                        centerY = cylinder.center.y,
-                        ovalRadiusX = cylinder.ovalRadiusX,
-                        ovalRadiusY = cylinder.ovalRadiusY,
-                        color = cylinder.color
-                    )
-                }
-
                 // Draw Star
-                if (drawMode == DrawMode.StarDraw){
+                if (drawMode == DrawMode.StarDraw) {
                     temporaryStar?.let { star ->
                         drawStar(
                             centerX = star.center.x,
@@ -1434,16 +1688,51 @@ fun DrawingApp() {
                     }
                 }
 
-                stars.forEach { star ->
-                    drawStar(
-                        centerX = star.center.x,
-                        centerY = star.center.y,
-                        radius = star.radius,
-                        numPoints = star.numPoints,
-                        color = star.color
+                //selection rect drawing
+                if (drawMode == DrawMode.Selection) {
+                    selectionRectangle?.let { rectangle ->
+                        drawRect(
+                            color = Color.Red,
+                            topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
+                            size = Size(rectangle.width, rectangle.height),
+                            style = Stroke(
+                                10f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                            )
+                        )
+                    }
+                    drawPath(
+                        color = Color.Red,
+                        path = selectionPath,
+                        style = Stroke(
+                            10f,
+                            cap = StrokeCap.Round,
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                        )
                     )
-                }
+                    if (showSelectionIcons) {
+                        drawRect(
+                            color = Color.Red,
+                            topLeft = Offset(
+                                selectionRectangle!!.leftTop.x + selectionRectangle!!.width - selectionRectangle!!.width / 4,
+                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height
+                            ),
+                            size = Size(
+                                selectionRectangle!!.width / 4,
+                                selectionRectangle!!.width / 4
+                            ),
+                            style = Fill
+                        )
+                        deleteSelectedBtnRect = Rect(
+                            Offset(
+                                (selectionRectangle!!.leftTop.x + selectionRectangle!!.width - selectionRectangle!!.width / 4),
+                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height
+                            ),
+                            Size(selectionRectangle!!.width / 4, selectionRectangle!!.width / 4)
+                        )
+                    }
 
+                }
 
                 paths.forEach {
 
@@ -1475,9 +1764,6 @@ fun DrawingApp() {
                         )
                     }
                 }
-
-                //Path.combine(PathOperation.Intersect, paths[0].first, paths[1].first)
-
 
                 if (motionEvent != MotionEvent.Idle) {
 
@@ -1553,20 +1839,7 @@ fun DrawingApp() {
                 myTable.rowAmount = 0
                 myTable.columnAmount = 0
                 //clear figures
-                lines = emptyList()
-                dashedLines = emptyList()
-                arrowLines = emptyList()
-                dashedArrowLines = emptyList()
-                triangles = emptyList()
-                parallelograms = emptyList()
-                trapezoids = emptyList()
-                rectangles = emptyList()
-                roundRectangles = emptyList()
-                circles = emptyList()
-                halfCircles = emptyList()
-                octagons = emptyList()
-                cylinders = emptyList()
-                stars = emptyList()
+                figures = emptyList()
 
             },
             onPathPropertiesChange = {
@@ -1673,10 +1946,17 @@ private fun calculateArrowheadPoints(endPoint: Offset, angle: Float): Path {
     return arrowPath
 }
 
-fun DrawScope.drawCylinder(centerX: Float, centerY: Float, ovalRadiusX: Float, ovalRadiusY: Float, color: Color) {
+fun DrawScope.drawCylinder(
+    centerX: Float,
+    centerY: Float,
+    ovalRadiusX: Float,
+    ovalRadiusY: Float,
+    color: Color
+) {
 
     // Draw the oval top
-    drawOval(color = color, topLeft = Offset(centerX - ovalRadiusX, centerY - ovalRadiusY),
+    drawOval(
+        color = color, topLeft = Offset(centerX - ovalRadiusX, centerY - ovalRadiusY),
         size = Size(ovalRadiusX * 2, ovalRadiusY * 2), style = Stroke(10f)
     )
 
@@ -1688,7 +1968,7 @@ fun DrawScope.drawCylinder(centerX: Float, centerY: Float, ovalRadiusX: Float, o
     val endPointRight = Offset(centerX + ovalRadiusX, centerY + ovalRadiusY * 3.5f)
 
     // Draw lines down from the oval
-    drawLine(color, startPointLeft, endPointLeft, strokeWidth = 10f,cap = StrokeCap.Round)
+    drawLine(color, startPointLeft, endPointLeft, strokeWidth = 10f, cap = StrokeCap.Round)
     drawLine(color, startPointRight, endPointRight, strokeWidth = 10f, cap = StrokeCap.Round)
 
 
@@ -1704,7 +1984,14 @@ fun DrawScope.drawCylinder(centerX: Float, centerY: Float, ovalRadiusX: Float, o
     }
     drawPath(path, color = color, style = Stroke(10f, cap = StrokeCap.Round))
 }
-fun DrawScope.drawStar(centerX: Float, centerY: Float, radius: Float, numPoints: Int, color: Color) {
+
+fun DrawScope.drawStar(
+    centerX: Float,
+    centerY: Float,
+    radius: Float,
+    numPoints: Int,
+    color: Color
+) {
     val outerAngle = 2 * PI / numPoints // Angle between each outer point
     val halfAngle = PI / numPoints // Half the angle between the points of the star
 
@@ -1713,7 +2000,8 @@ fun DrawScope.drawStar(centerX: Float, centerY: Float, radius: Float, numPoints:
     var currentAngle = -PI / 2 // Start from the top
 
     repeat(numPoints * 2) { i ->
-        val currentRadius = if (i % 2 == 0) radius else radius / 2 // Alternating between outer and inner points
+        val currentRadius =
+            if (i % 2 == 0) radius else radius / 2 // Alternating between outer and inner points
         val x = centerX + (currentRadius * cos(currentAngle)).toFloat()
         val y = centerY + (currentRadius * sin(currentAngle)).toFloat()
 
