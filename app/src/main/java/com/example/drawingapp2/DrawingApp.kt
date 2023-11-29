@@ -37,6 +37,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -45,13 +46,17 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -152,10 +157,13 @@ fun DrawingApp() {
     //selection rect
     var selectionRectangle by mutableStateOf<Rectangle?>(null)
     var showSelectionIcons by remember { mutableStateOf(false) }
+    var isFigureSelected by remember { mutableStateOf(false) }
 
     var deleteSelectedBtnRect by remember { mutableStateOf(Rect(Offset(0f, 0f), Size(0f, 0f))) }
     //path for selection
     var selectionPath by remember { mutableStateOf(Path()) }
+    val imageDeleteBtn = ImageBitmap.imageResource(id = R.drawable.img_delete)
+    val painter: Painter = painterResource(id = R.drawable.baseline_cancel_24)
 
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
@@ -511,6 +519,7 @@ fun DrawingApp() {
                             Color.Red
                         )
                         showSelectionIcons = false
+                        isFigureSelected = false
                     }
 
                     previousPosition = currentPosition
@@ -831,7 +840,7 @@ fun DrawingApp() {
                         figures.forEach { figure ->
                             when (figure) {
                                 is Line -> {
-                                    when(figure.type){
+                                    when (figure.type) {
                                         LineType.DASHED -> {
                                             if (myRect.contains(
                                                     Offset(
@@ -841,8 +850,10 @@ fun DrawingApp() {
                                                 )
                                             ) {
                                                 figure.isSelected = true
+                                                isFigureSelected = true
                                             }
                                         }
+
                                         LineType.ARROW -> {
                                             if (myRect.contains(
                                                     Offset(
@@ -852,8 +863,10 @@ fun DrawingApp() {
                                                 )
                                             ) {
                                                 figure.isSelected = true
+                                                isFigureSelected = true
                                             }
                                         }
+
                                         LineType.DASHED_ARROW -> {
                                             if (myRect.contains(
                                                     Offset(
@@ -863,8 +876,10 @@ fun DrawingApp() {
                                                 )
                                             ) {
                                                 figure.isSelected = true
+                                                isFigureSelected = true
                                             }
                                         }
+
                                         else -> { //LineType.REGULAR
                                             if (myRect.contains(
                                                     Offset(
@@ -874,6 +889,7 @@ fun DrawingApp() {
                                                 )
                                             ) {
                                                 figure.isSelected = true
+                                                isFigureSelected = true
                                             }
                                         }
                                     }
@@ -889,6 +905,7 @@ fun DrawingApp() {
                                         )
                                     ) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
                                 }
 
@@ -901,6 +918,7 @@ fun DrawingApp() {
                                         )
                                     ) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
                                 }
 
@@ -913,6 +931,7 @@ fun DrawingApp() {
                                         )
                                     ) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
                                 }
 
@@ -925,6 +944,7 @@ fun DrawingApp() {
                                         )
                                     ) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
 
                                 }
@@ -938,6 +958,7 @@ fun DrawingApp() {
                                         )
                                     ) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
 
                                 }
@@ -945,6 +966,7 @@ fun DrawingApp() {
                                 is Circle -> {
                                     if (myRect.contains(Offset(figure.center.x, figure.center.y))) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
                                 }
 
@@ -957,6 +979,7 @@ fun DrawingApp() {
                                         )
                                     ) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
                                 }
 
@@ -969,6 +992,7 @@ fun DrawingApp() {
                                         )
                                     ) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
                                 }
 
@@ -981,6 +1005,7 @@ fun DrawingApp() {
                                         )
                                     ) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
                                 }
 
@@ -993,9 +1018,18 @@ fun DrawingApp() {
                                         )
                                     ) {
                                         figure.isSelected = true
+                                        isFigureSelected = true
                                     }
                                 }
                             }
+                        }
+                        if (!isFigureSelected) {
+                            selectionRectangle = Rectangle(
+                                PointF(currentPosition.x, currentPosition.y),
+                                0f,
+                                0f,
+                                Color.Red
+                            )
                         }
                         if (deleteSelectedBtnRect.contains(
                                 Offset(
@@ -1096,16 +1130,22 @@ fun DrawingApp() {
                 figures.forEach { figure ->
                     when (figure) {
                         is Line -> {
-                            when(figure.type){
+                            when (figure.type) {
                                 LineType.DASHED -> {
                                     drawLine(
                                         color = figure.color,
                                         start = Offset(figure.start.x, figure.start.y),
                                         end = Offset(figure.end.x, figure.end.y),
                                         strokeWidth = 10f,
-                                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                                        pathEffect = PathEffect.dashPathEffect(
+                                            floatArrayOf(
+                                                20f,
+                                                20f
+                                            ), 0f
+                                        )
                                     )
                                 }
+
                                 LineType.ARROW -> {
                                     val path = Path()
                                     path.moveTo(figure.start.x, figure.start.y)
@@ -1123,7 +1163,10 @@ fun DrawingApp() {
                                         figure.end.x - figure.start.x
                                     )
                                     val arrowPoints =
-                                        calculateArrowheadPoints(Offset(figure.end.x, figure.end.y), angle)
+                                        calculateArrowheadPoints(
+                                            Offset(figure.end.x, figure.end.y),
+                                            angle
+                                        )
 
                                     // Draw the arrowhead
                                     drawPath(
@@ -1132,6 +1175,7 @@ fun DrawingApp() {
                                         style = Stroke(width = 10f, cap = StrokeCap.Round)
                                     )
                                 }
+
                                 LineType.DASHED_ARROW -> {
                                     val path = Path()
                                     path.moveTo(figure.start.x, figure.start.y)
@@ -1141,7 +1185,12 @@ fun DrawingApp() {
                                         path, color = figure.color,
                                         style = Stroke(
                                             width = 10f,
-                                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f),
+                                            pathEffect = PathEffect.dashPathEffect(
+                                                floatArrayOf(
+                                                    20f,
+                                                    20f
+                                                ), 0f
+                                            ),
                                             cap = StrokeCap.Round
                                         )
                                     ) // Modify stroke width as needed
@@ -1165,6 +1214,7 @@ fun DrawingApp() {
                                         style = Stroke(width = 10f, cap = StrokeCap.Round)
                                     )
                                 }
+
                                 else -> { //LineType.REGULAR
                                     drawLine(
                                         color = figure.color,
@@ -1723,6 +1773,23 @@ fun DrawingApp() {
                             ),
                             style = Fill
                         )
+
+                        with(painter) {
+                            translate(
+                                (selectionRectangle!!.leftTop.x + selectionRectangle!!.width - selectionRectangle!!.width / 4),
+                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height,
+                            )
+                            draw(size = Size(selectionRectangle!!.width / 4, selectionRectangle!!.width / 4))
+                        }
+
+
+                        /*drawImage(
+                            image = imageDeleteBtn,
+                            topLeft = Offset(
+                                (selectionRectangle!!.leftTop.x + selectionRectangle!!.width - selectionRectangle!!.width / 4),
+                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height
+                            )
+                        )*/
                         deleteSelectedBtnRect = Rect(
                             Offset(
                                 (selectionRectangle!!.leftTop.x + selectionRectangle!!.width - selectionRectangle!!.width / 4),
@@ -1764,6 +1831,8 @@ fun DrawingApp() {
                         )
                     }
                 }
+
+
 
                 if (motionEvent != MotionEvent.Idle) {
 
