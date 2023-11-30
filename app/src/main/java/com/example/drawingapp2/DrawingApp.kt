@@ -15,11 +15,24 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -47,16 +60,19 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.inset
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.consumePositionChange
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -67,6 +83,7 @@ import com.example.drawingapp2.gesture.MotionEvent
 import com.example.drawingapp2.gesture.dragMotionEvent
 import com.example.drawingapp2.menu.DrawingPropertiesMenu
 import com.example.drawingapp2.model.*
+import com.example.drawingapp2.ui.theme.Blue400
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -155,15 +172,21 @@ fun DrawingApp() {
     var figures by remember { mutableStateOf(emptyList<Figure>()) }
 
     //selection rect
-    var selectionRectangle by mutableStateOf<Rectangle?>(null)
+    var selectionRectangle by mutableStateOf<Rectangle?>(Rectangle(PointF(0f,0f), 0f, 0f, Color.Red))
     var showSelectionIcons by remember { mutableStateOf(false) }
+    var showColorCircles by remember { mutableStateOf(false) }
     var isFigureSelected by remember { mutableStateOf(false) }
 
     var deleteSelectedBtnRect by remember { mutableStateOf(Rect(Offset(0f, 0f), Size(0f, 0f))) }
+    var colorSelectedBtnRect by remember { mutableStateOf(Rect(Offset(0f, 0f), Size(0f, 0f))) }
+    var moveSelectedBtnRect by remember { mutableStateOf(Rect(Offset(0f, 0f), Size(0f, 0f))) }
     //path for selection
     var selectionPath by remember { mutableStateOf(Path()) }
-    val imageDeleteBtn = ImageBitmap.imageResource(id = R.drawable.img_delete)
-    val painter: Painter = painterResource(id = R.drawable.baseline_cancel_24)
+    val painterDelete: Painter = painterResource(id = R.drawable.baseline_cancel_24)
+    val painterColor: Painter = painterResource(id = R.drawable.img_delete)
+    val painterMove: Painter = painterResource(id = R.drawable.baseline_move_24)
+
+    var colorCircles by remember { mutableStateOf(emptyList<Circle>()) }
 
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
@@ -194,7 +217,6 @@ fun DrawingApp() {
     var myRotation by remember { mutableStateOf(0f) }
 
     var initialTouchPoint by mutableStateOf(Offset.Zero)
-
 
 
     Box(
@@ -368,9 +390,67 @@ fun DrawingApp() {
                 }
             )
 
+
         Canvas(
             modifier = drawModifier
         ) {
+            if (showColorCircles) {
+                colorCircles = emptyList()
+                for (i in 0 until 8) {
+                    colorCircles += Circle(
+                        PointF(
+                            if (i < 4) {
+                                selectionRectangle!!.leftTop.x + 50f * i + 25f
+                            } else {
+                                selectionRectangle!!.leftTop.x + 50f * (i - 4) + 25f
+                            },
+                            if (i < 4) {
+                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height + 75f
+                            } else {
+                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height + 125f
+                            }
+                        ),
+                        25f,
+                        color = when (i) {
+                            0 -> {
+                                Color.Black
+                            }
+
+                            1 -> {
+                                Color.White
+                            }
+
+                            2 -> {
+                                Color.Red
+                            }
+
+                            3 -> {
+                                Color.Blue
+                            }
+
+                            4 -> {
+                                Color.Green
+                            }
+
+                            5 -> {
+                                Color.Magenta
+                            }
+
+                            6 -> {
+                                Color.Cyan
+                            }
+
+                            7 -> {
+                                Color.Yellow
+                            }
+
+                            else -> {
+                                Color.Black
+                            }
+                        }
+                    )
+                }
+            }
 
             //motion events
             when (motionEvent) {
@@ -509,17 +589,19 @@ fun DrawingApp() {
                     }
 
                     if (drawMode == DrawMode.Selection) {
+
                         // selection rect
                         selectionPath.moveTo(currentPosition.x, currentPosition.y)
-                        initialTouchPoint = currentPosition
-                        selectionRectangle = Rectangle(
+                        /*selectionRectangle = Rectangle(
                             PointF(currentPosition.x, currentPosition.y),
                             0f,
                             0f,
                             Color.Red
-                        )
+                        )*/
                         showSelectionIcons = false
                         isFigureSelected = false
+
+
                     }
 
                     previousPosition = currentPosition
@@ -682,17 +764,6 @@ fun DrawingApp() {
                             (previousPosition.y + currentPosition.y) / 2
                         )
 
-                        /*val left = min(initialTouchPoint.x, currentPosition.x)
-                        val top = min(initialTouchPoint.y, currentPosition.y)
-                        val right = max(initialTouchPoint.x, currentPosition.x)
-                        val bottom = max(initialTouchPoint.y, currentPosition.y)
-
-                        selectionRectangle?.let { rectangle ->
-                            rectangle.leftTop.x = left
-                            rectangle.leftTop.y = top
-                            rectangle.width = right - left
-                            rectangle.height = bottom - top
-                        }*/
                     }
 
                     previousPosition = currentPosition
@@ -824,11 +895,19 @@ fun DrawingApp() {
                     if (drawMode == DrawMode.Selection) {
                         selectionPath.lineTo(currentPosition.x, currentPosition.y)
                         val (left, top, right, bottom) = selectionPath.getBounds()
-                        /*val myRect = Rect(
-                            Offset(selectionRectangle!!.leftTop.x, selectionRectangle!!.leftTop.y),
-                            Size(selectionRectangle!!.width, selectionRectangle!!.height)
-                        )*/
                         val myRect = Rect(left, top, right, bottom)
+                        /*selectionRectangle = Rectangle(
+                            PointF(currentPosition.x, currentPosition.y),
+                            0f,
+                            0f,
+                            Color.Red
+                        )*/
+                        selectionRectangle = Rectangle(
+                            PointF(left, top),
+                            right - left,
+                            bottom - top,
+                            Color.Red
+                        )
                         selectionRectangle?.let { rectangle ->
                             rectangle.leftTop.x = left
                             rectangle.leftTop.y = top
@@ -836,6 +915,7 @@ fun DrawingApp() {
                             rectangle.height = bottom - top
                         }
                         selectionPath = Path()
+
                         //figure selection
                         figures.forEach { figure ->
                             when (figure) {
@@ -964,7 +1044,13 @@ fun DrawingApp() {
                                 }
 
                                 is Circle -> {
-                                    if (myRect.contains(Offset(figure.center.x, figure.center.y))) {
+                                    if (myRect.contains(
+                                            Offset(
+                                                figure.center.x,
+                                                figure.center.y
+                                            )
+                                        )
+                                    ) {
                                         figure.isSelected = true
                                         isFigureSelected = true
                                     }
@@ -1023,27 +1109,18 @@ fun DrawingApp() {
                                 }
                             }
                         }
+
                         if (!isFigureSelected) {
                             selectionRectangle = Rectangle(
-                                PointF(currentPosition.x, currentPosition.y),
+                                PointF(0f, 0f),
                                 0f,
                                 0f,
                                 Color.Red
                             )
+                            showSelectionIcons = false
+                            showColorCircles = false
                         }
-                        if (deleteSelectedBtnRect.contains(
-                                Offset(
-                                    currentPosition.x,
-                                    currentPosition.y
-                                )
-                            )
-                        ) {
-                            figures.forEach { figure ->
-                                if (figure.isSelected) {
-                                    figures = figures - figure
-                                }
-                            }
-                        }
+
                     }
 
                     showSelectionIcons = drawMode == DrawMode.Selection
@@ -1740,7 +1817,7 @@ fun DrawingApp() {
 
                 //selection rect drawing
                 if (drawMode == DrawMode.Selection) {
-                    selectionRectangle?.let { rectangle ->
+                    /*selectionRectangle?.let { rectangle ->
                         drawRect(
                             color = Color.Red,
                             topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
@@ -1750,7 +1827,22 @@ fun DrawingApp() {
                                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
                             )
                         )
+                    }*/
+
+                    if(isFigureSelected) {
+                        selectionRectangle?.let { rectangle ->
+                            drawRect(
+                                color = Color.Red,
+                                topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
+                                size = Size(rectangle.width, rectangle.height),
+                                style = Stroke(
+                                    10f,
+                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                                )
+                            )
+                        }
                     }
+
                     drawPath(
                         color = Color.Red,
                         path = selectionPath,
@@ -1760,44 +1852,17 @@ fun DrawingApp() {
                             pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
                         )
                     )
-                    if (showSelectionIcons) {
-                        drawRect(
-                            color = Color.Red,
-                            topLeft = Offset(
-                                selectionRectangle!!.leftTop.x + selectionRectangle!!.width - selectionRectangle!!.width / 4,
-                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height
-                            ),
-                            size = Size(
-                                selectionRectangle!!.width / 4,
-                                selectionRectangle!!.width / 4
-                            ),
-                            style = Fill
-                        )
 
-                        with(painter) {
-                            translate(
-                                (selectionRectangle!!.leftTop.x + selectionRectangle!!.width - selectionRectangle!!.width / 4),
-                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height,
+                    /*if (showColorCircles) {
+                        colorCircles.forEach { circle ->
+                            drawCircle(
+                                color = circle.color,
+                                center = Offset(circle.center.x, circle.center.y),
+                                radius = circle.radius,
+                                //style = Stroke(10f)
                             )
-                            draw(size = Size(selectionRectangle!!.width / 4, selectionRectangle!!.width / 4))
                         }
-
-
-                        /*drawImage(
-                            image = imageDeleteBtn,
-                            topLeft = Offset(
-                                (selectionRectangle!!.leftTop.x + selectionRectangle!!.width - selectionRectangle!!.width / 4),
-                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height
-                            )
-                        )*/
-                        deleteSelectedBtnRect = Rect(
-                            Offset(
-                                (selectionRectangle!!.leftTop.x + selectionRectangle!!.width - selectionRectangle!!.width / 4),
-                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height
-                            ),
-                            Size(selectionRectangle!!.width / 4, selectionRectangle!!.width / 4)
-                        )
-                    }
+                    }*/
 
                 }
 
@@ -1861,8 +1926,13 @@ fun DrawingApp() {
                 }
                 restoreToCount(checkPoint)
             }
-
         }
+
+
+        SelectionIcons(
+            (showSelectionIcons && isFigureSelected)
+        )
+
 
 
         Clock(
@@ -2143,5 +2213,36 @@ fun Clock(
         modifier = modifier
     ) {
         Text(text = currentTime, fontSize = 16.sp)
+    }
+}
+
+@Composable
+fun SelectionIcons(
+    isShown: Boolean = false
+) {
+    if (isShown) {
+        Row {
+            IconButton(onClick = { /*TODO*/ }) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_move_24),
+                    contentDescription = null,
+                    tint = Color.LightGray
+                )
+            }
+            IconButton(onClick = { /*TODO*/ }) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_cancel_24),
+                    contentDescription = null,
+                    tint = Color.LightGray
+                )
+            }
+            IconButton(onClick = { /*TODO*/ }) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_cancel_24),
+                    contentDescription = null,
+                    tint = Color.LightGray
+                )
+            }
+        }
     }
 }
