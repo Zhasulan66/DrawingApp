@@ -1,6 +1,7 @@
 package com.example.drawingapp2
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
@@ -15,24 +16,19 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
@@ -40,17 +36,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -59,20 +54,15 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.inset
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.consumeDownChange
 import androidx.compose.ui.input.pointer.consumePositionChange
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -83,7 +73,6 @@ import com.example.drawingapp2.gesture.MotionEvent
 import com.example.drawingapp2.gesture.dragMotionEvent
 import com.example.drawingapp2.menu.DrawingPropertiesMenu
 import com.example.drawingapp2.model.*
-import com.example.drawingapp2.ui.theme.Blue400
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -172,21 +161,12 @@ fun DrawingApp() {
     var figures by remember { mutableStateOf(emptyList<Figure>()) }
 
     //selection rect
-    var selectionRectangle by mutableStateOf<Rectangle?>(Rectangle(PointF(0f,0f), 0f, 0f, Color.Red))
+    var selectionRectangle by mutableStateOf<Rectangle?>(null)
     var showSelectionIcons by remember { mutableStateOf(false) }
-    var showColorCircles by remember { mutableStateOf(false) }
     var isFigureSelected by remember { mutableStateOf(false) }
-
-    var deleteSelectedBtnRect by remember { mutableStateOf(Rect(Offset(0f, 0f), Size(0f, 0f))) }
-    var colorSelectedBtnRect by remember { mutableStateOf(Rect(Offset(0f, 0f), Size(0f, 0f))) }
-    var moveSelectedBtnRect by remember { mutableStateOf(Rect(Offset(0f, 0f), Size(0f, 0f))) }
     //path for selection
     var selectionPath by remember { mutableStateOf(Path()) }
-    val painterDelete: Painter = painterResource(id = R.drawable.baseline_cancel_24)
-    val painterColor: Painter = painterResource(id = R.drawable.img_delete)
-    val painterMove: Painter = painterResource(id = R.drawable.baseline_move_24)
-
-    var colorCircles by remember { mutableStateOf(emptyList<Circle>()) }
+    var selectionRect by remember { mutableStateOf(emptyList<Rectangle>()) }
 
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Color.White) }
@@ -298,7 +278,18 @@ fun DrawingApp() {
                     motionEvent = MotionEvent.Down
                     currentPosition = pointerInputChange.position
                     pointerInputChange.consumeDownChange()
-
+                    if(drawMode == DrawMode.MoveSelection){
+                        val myRect = Rect(
+                            Offset(
+                                selectionRect[0].leftTop.x,
+                                selectionRect[0].leftTop.y
+                            ),
+                            Size(selectionRect[0].width, selectionRect[0].height)
+                        )
+                        if(!myRect.contains(currentPosition)){
+                            drawMode = DrawMode.Selection
+                        }
+                    }
                 },
                 onDrag = { pointerInputChange ->
                     motionEvent = MotionEvent.Move
@@ -329,6 +320,76 @@ fun DrawingApp() {
 
                         currentPath.translate(change)
 
+                    }
+                    if(drawMode == DrawMode.MoveSelection){
+                        val change = pointerInputChange.positionChange()
+                        selectionRect[0].leftTop.x += change.x
+                        selectionRect[0].leftTop.y += change.y
+                        figures.forEach { figure ->
+                           if(figure.isSelected){
+                               when (figure) {
+                                   is Line -> {
+                                       figure.start.x += change.x
+                                       figure.start.y += change.y
+                                       figure.end.x += change.x
+                                       figure.end.y += change.y
+                                   }
+
+                                   is Triangle -> {
+                                       figure.point1 += change
+                                       figure.point2 += change
+                                       figure.point3 += change
+                                   }
+
+                                   is Parallelogram -> {
+                                       figure.points[0] += change
+                                       figure.points[1] += change
+                                       figure.points[2] += change
+                                       figure.points[3] += change
+                                   }
+
+                                   is Trapezoid -> {
+                                       figure.points[0] += change
+                                       figure.points[1] += change
+                                       figure.points[2] += change
+                                       figure.points[3] += change
+                                   }
+
+                                   is Rectangle -> {
+                                       figure.leftTop.x += change.x
+                                       figure.leftTop.y += change.x
+                                   }
+
+                                   is RoundRectangle -> {
+                                       figure.leftTop.x += change.x
+                                       figure.leftTop.y += change.y
+                                   }
+
+                                   is Circle -> {
+                                       figure.center.x += change.x
+                                       figure.center.y += change.y
+                                   }
+
+                                   is HalfCircle -> {
+                                       figure.centerX += change.x
+                                       figure.centerY += change.y
+                                   }
+
+                                   is Octagon -> {
+                                       figure.center += change
+                                   }
+
+                                   is Cylinder -> {
+                                       figure.center += change
+                                   }
+
+                                   is Star -> {
+                                       figure.center += change
+                                   }
+                               }
+
+                           }
+                        }
                     }
                     pointerInputChange.consumePositionChange()
 
@@ -394,63 +455,6 @@ fun DrawingApp() {
         Canvas(
             modifier = drawModifier
         ) {
-            if (showColorCircles) {
-                colorCircles = emptyList()
-                for (i in 0 until 8) {
-                    colorCircles += Circle(
-                        PointF(
-                            if (i < 4) {
-                                selectionRectangle!!.leftTop.x + 50f * i + 25f
-                            } else {
-                                selectionRectangle!!.leftTop.x + 50f * (i - 4) + 25f
-                            },
-                            if (i < 4) {
-                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height + 75f
-                            } else {
-                                selectionRectangle!!.leftTop.y + selectionRectangle!!.height + 125f
-                            }
-                        ),
-                        25f,
-                        color = when (i) {
-                            0 -> {
-                                Color.Black
-                            }
-
-                            1 -> {
-                                Color.White
-                            }
-
-                            2 -> {
-                                Color.Red
-                            }
-
-                            3 -> {
-                                Color.Blue
-                            }
-
-                            4 -> {
-                                Color.Green
-                            }
-
-                            5 -> {
-                                Color.Magenta
-                            }
-
-                            6 -> {
-                                Color.Cyan
-                            }
-
-                            7 -> {
-                                Color.Yellow
-                            }
-
-                            else -> {
-                                Color.Black
-                            }
-                        }
-                    )
-                }
-            }
 
             //motion events
             when (motionEvent) {
@@ -592,15 +596,12 @@ fun DrawingApp() {
 
                         // selection rect
                         selectionPath.moveTo(currentPosition.x, currentPosition.y)
-                        /*selectionRectangle = Rectangle(
-                            PointF(currentPosition.x, currentPosition.y),
-                            0f,
-                            0f,
-                            Color.Red
-                        )*/
                         showSelectionIcons = false
                         isFigureSelected = false
-
+                        selectionRect = emptyList()
+                        figures.forEach {
+                            it.isSelected = false
+                        }
 
                     }
 
@@ -914,6 +915,7 @@ fun DrawingApp() {
                             rectangle.width = right - left
                             rectangle.height = bottom - top
                         }
+                        selectionRect = selectionRect + selectionRectangle!!
                         selectionPath = Path()
 
                         //figure selection
@@ -1118,7 +1120,7 @@ fun DrawingApp() {
                                 Color.Red
                             )
                             showSelectionIcons = false
-                            showColorCircles = false
+                            selectionRect = emptyList()
                         }
 
                     }
@@ -1305,91 +1307,134 @@ fun DrawingApp() {
                         }
 
                         is Triangle -> {
-                            drawLine(
-                                color = figure.color,
-                                start = figure.point1,
-                                end = figure.point2,
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
-                            drawLine(
-                                color = figure.color,
-                                start = figure.point2,
-                                end = figure.point3,
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
-                            drawLine(
-                                color = figure.color,
-                                start = figure.point3,
-                                end = figure.point1,
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
+                            if(figure.isFilled) {
+                                val path = Path()
+
+                                path.moveTo(figure.point1.x, figure.point1.y)
+                                path.lineTo(figure.point2.x, figure.point2.y)
+                                path.lineTo(figure.point3.x, figure.point3.y)
+
+                                path.close()
+
+                                drawPath(path = path, color = figure.color)
+                            }
+                            else {
+                                drawLine(
+                                    color = figure.color,
+                                    start = figure.point1,
+                                    end = figure.point2,
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = figure.color,
+                                    start = figure.point2,
+                                    end = figure.point3,
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = figure.color,
+                                    start = figure.point3,
+                                    end = figure.point1,
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                            }
                         }
 
                         is Parallelogram -> {
                             val points = figure.points
-                            drawLine(
-                                color = figure.color,
-                                start = points[0],
-                                end = points[2],
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
-                            drawLine(
-                                color = figure.color,
-                                start = points[2],
-                                end = points[1],
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
-                            drawLine(
-                                color = figure.color,
-                                start = points[1],
-                                end = points[3],
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
-                            drawLine(
-                                color = figure.color,
-                                start = points[3],
-                                end = points[0],
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
+
+                            if(figure.isFilled) {
+                                val path = Path()
+
+                                path.moveTo(points[0].x, points[0].y)
+                                path.lineTo(points[2].x, points[2].y)
+                                path.lineTo(points[1].x, points[1].y)
+                                path.lineTo(points[3].x, points[3].y)
+
+                                path.close()
+
+                                drawPath(path = path, color = figure.color)
+                            }
+                            else {
+                                drawLine(
+                                    color = figure.color,
+                                    start = points[0],
+                                    end = points[2],
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = figure.color,
+                                    start = points[2],
+                                    end = points[1],
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = figure.color,
+                                    start = points[1],
+                                    end = points[3],
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = figure.color,
+                                    start = points[3],
+                                    end = points[0],
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                            }
                         }
 
                         is Trapezoid -> {
                             val points = figure.points
-                            drawLine(
-                                color = figure.color,
-                                start = points[0],
-                                end = points[1],
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
-                            drawLine(
-                                color = figure.color,
-                                start = points[1],
-                                end = points[2],
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
-                            drawLine(
-                                color = figure.color,
-                                start = points[2],
-                                end = points[3],
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
-                            drawLine(
-                                color = figure.color,
-                                start = points[3],
-                                end = points[0],
-                                strokeWidth = 10f,
-                                cap = StrokeCap.Round
-                            )
+
+                            if(figure.isFilled) {
+                                val path = Path()
+
+                                path.moveTo(points[0].x, points[0].y)
+                                path.lineTo(points[1].x, points[1].y)
+                                path.lineTo(points[2].x, points[2].y)
+                                path.lineTo(points[3].x, points[3].y)
+
+                                path.close()
+
+                                drawPath(path = path, color = figure.color)
+                            }
+                            else {
+                                drawLine(
+                                    color = figure.color,
+                                    start = points[0],
+                                    end = points[1],
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = figure.color,
+                                    start = points[1],
+                                    end = points[2],
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = figure.color,
+                                    start = points[2],
+                                    end = points[3],
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                                drawLine(
+                                    color = figure.color,
+                                    start = points[3],
+                                    end = points[0],
+                                    strokeWidth = 10f,
+                                    cap = StrokeCap.Round
+                                )
+                            }
                         }
 
                         is Rectangle -> {
@@ -1397,7 +1442,8 @@ fun DrawingApp() {
                                 color = figure.color,
                                 topLeft = Offset(figure.leftTop.x, figure.leftTop.y),
                                 size = Size(figure.width, figure.height),
-                                style = Stroke(10f)
+                                style = if(figure.isFilled) { Fill }
+                                else { Stroke(10f) }
                             )
 
                         }
@@ -1407,7 +1453,8 @@ fun DrawingApp() {
                                 color = figure.color,
                                 topLeft = Offset(figure.leftTop.x, figure.leftTop.y),
                                 size = Size(figure.width, figure.height),
-                                style = Stroke(10f),
+                                style = if(figure.isFilled) { Fill }
+                                else { Stroke(10f) },
                                 cornerRadius = CornerRadius(20f, 20f)
                             )
 
@@ -1418,7 +1465,9 @@ fun DrawingApp() {
                                 color = figure.color,
                                 center = Offset(figure.center.x, figure.center.y),
                                 radius = figure.radius,
-                                style = Stroke(10f)
+                                style = if(figure.isFilled) { Fill }
+                                        else { Stroke(10f) }
+
                             )
                         }
 
@@ -1431,7 +1480,8 @@ fun DrawingApp() {
                                 startAngle = startAngle,
                                 sweepAngle = sweepAngle,
                                 useCenter = false,
-                                style = Stroke(width = 10f, cap = StrokeCap.Round),
+                                style = if(figure.isFilled) {  Fill }
+                                else { Stroke(width = 10f, cap = StrokeCap.Round) },
                                 topLeft = Offset(
                                     figure.centerX - figure.radius,
                                     figure.centerY - figure.radius
@@ -1450,7 +1500,8 @@ fun DrawingApp() {
                                 start = Offset(startX, startY),
                                 end = Offset(endX, endY),
                                 strokeWidth = 10f,
-                                cap = StrokeCap.Round
+                                cap = if(figure.isFilled) { StrokeCap.Butt }
+                                else { StrokeCap.Round }
                             )
                         }
 
@@ -1466,14 +1517,29 @@ fun DrawingApp() {
                                 points.add(Offset(x, y))
                             }
 
-                            for (i in 0 until points.size) {
-                                drawLine(
-                                    color = figure.color,
-                                    start = points[i],
-                                    end = points[(i + 1) % points.size],
-                                    strokeWidth = 10f,
-                                    cap = StrokeCap.Round
-                                )
+                            if(figure.isFilled) {
+                                val path = Path()
+
+                                path.moveTo(points[0].x, points[0].y)
+
+                                for (i in 1 until points.size) {
+                                    path.lineTo(points[i].x, points[i].y)
+                                }
+
+                                path.close()
+
+                                drawPath(path = path, color = figure.color)
+                            }
+                            else {
+                                for (i in 0 until points.size) {
+                                    drawLine(
+                                        color = figure.color,
+                                        start = points[i],
+                                        end = points[(i + 1) % points.size],
+                                        strokeWidth = 10f,
+                                        cap = StrokeCap.Round
+                                    )
+                                }
                             }
                         }
 
@@ -1483,7 +1549,8 @@ fun DrawingApp() {
                                 centerY = figure.center.y,
                                 ovalRadiusX = figure.ovalRadiusX,
                                 ovalRadiusY = figure.ovalRadiusY,
-                                color = figure.color
+                                color = figure.color,
+                                isFilled = figure.isFilled
                             )
                         }
 
@@ -1493,7 +1560,8 @@ fun DrawingApp() {
                                 centerY = figure.center.y,
                                 radius = figure.radius,
                                 numPoints = figure.numPoints,
-                                color = figure.color
+                                color = figure.color,
+                                isFilled = figure.isFilled
                             )
                         }
                     }
@@ -1797,7 +1865,8 @@ fun DrawingApp() {
                             centerY = cylinder.center.y,
                             ovalRadiusX = cylinder.ovalRadiusX,
                             ovalRadiusY = cylinder.ovalRadiusY,
-                            color = Color.Gray
+                            color = Color.Gray,
+                            isFilled = cylinder.isFilled
                         )
                     }
                 }
@@ -1810,13 +1879,15 @@ fun DrawingApp() {
                             centerY = star.center.y,
                             radius = star.radius,
                             numPoints = star.numPoints,
-                            color = Color.Gray
+                            color = Color.Gray,
+                            isFilled = star.isFilled
                         )
                     }
                 }
 
                 //selection rect drawing
-                if (drawMode == DrawMode.Selection) {
+                if (drawMode == DrawMode.Selection
+                    || drawMode == DrawMode.MoveSelection) {
                     /*selectionRectangle?.let { rectangle ->
                         drawRect(
                             color = Color.Red,
@@ -1829,7 +1900,7 @@ fun DrawingApp() {
                         )
                     }*/
 
-                    if(isFigureSelected) {
+                    if (isFigureSelected) {
                         selectionRectangle?.let { rectangle ->
                             drawRect(
                                 color = Color.Red,
@@ -1837,7 +1908,25 @@ fun DrawingApp() {
                                 size = Size(rectangle.width, rectangle.height),
                                 style = Stroke(
                                     10f,
-                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
+                                    pathEffect = PathEffect.dashPathEffect(
+                                        floatArrayOf(20f, 20f),
+                                        0f
+                                    )
+                                )
+                            )
+                        }
+
+                        selectionRect.forEach {
+                            drawRect(
+                                color = Color.Red,
+                                topLeft = Offset(it.leftTop.x, it.leftTop.y),
+                                size = Size(it.width, it.height),
+                                style = Stroke(
+                                    10f,
+                                    pathEffect = PathEffect.dashPathEffect(
+                                        floatArrayOf(20f, 20f),
+                                        0f
+                                    )
                                 )
                             )
                         }
@@ -1929,9 +2018,44 @@ fun DrawingApp() {
         }
 
 
-        SelectionIcons(
-            (showSelectionIcons && isFigureSelected)
-        )
+        if(showSelectionIcons && isFigureSelected) {
+            //selectionRectangle is empty here
+            SelectionIcons(
+                rect = selectionRect[0],
+                context = context,
+                deleteSelected = {
+                    figures.forEach { figure ->
+                        if(figure.isSelected){
+                            figures = figures - figure
+                        }
+                    }
+                    showSelectionIcons = false
+                    selectionRect = emptyList()
+                },
+                colorClicked = { color ->
+                    figures.forEach { figure ->
+                        if(figure.isSelected){
+                            figure.color = color
+                        }
+                    }
+                },
+                fillSelected = {
+                    figures.forEach { figure ->
+                        if(figure.isSelected){
+                            figure.isFilled = !figure.isFilled
+                        }
+                    }
+                },
+                onChangeMoveMode = {
+                    drawMode = if(drawMode == DrawMode.MoveSelection) {
+                        DrawMode.Selection
+                    } else {
+                        DrawMode.MoveSelection
+                    }
+                    showSelectionIcons = false
+                }
+            )
+        }
 
 
 
@@ -2090,14 +2214,10 @@ fun DrawScope.drawCylinder(
     centerY: Float,
     ovalRadiusX: Float,
     ovalRadiusY: Float,
-    color: Color
+    color: Color,
+    isFilled: Boolean
 ) {
 
-    // Draw the oval top
-    drawOval(
-        color = color, topLeft = Offset(centerX - ovalRadiusX, centerY - ovalRadiusY),
-        size = Size(ovalRadiusX * 2, ovalRadiusY * 2), style = Stroke(10f)
-    )
 
     // Calculate points for lines at the sides of the oval
     val startPointLeft = Offset(centerX - ovalRadiusX, centerY)
@@ -2106,22 +2226,70 @@ fun DrawScope.drawCylinder(
     val startPointRight = Offset(centerX + ovalRadiusX, centerY)
     val endPointRight = Offset(centerX + ovalRadiusX, centerY + ovalRadiusY * 3.5f)
 
-    // Draw lines down from the oval
-    drawLine(color, startPointLeft, endPointLeft, strokeWidth = 10f, cap = StrokeCap.Round)
-    drawLine(color, startPointRight, endPointRight, strokeWidth = 10f, cap = StrokeCap.Round)
+    if(isFilled){
+        // Draw the oval top
+        drawOval(
+            color = color, topLeft = Offset(centerX - ovalRadiusX, centerY - ovalRadiusY),
+            size = Size(ovalRadiusX * 2, ovalRadiusY * 2), style = Fill
+        )
+        // Draw lines down from the oval
+        val cylinderPath = Path()
 
+        // Move to the starting point
+        cylinderPath.moveTo(startPointLeft.x, startPointLeft.y)
+        cylinderPath.lineTo(startPointRight.x, startPointRight.y)
+        cylinderPath.lineTo(endPointRight.x, endPointRight.y)
+        cylinderPath.lineTo(endPointLeft.x, endPointLeft.y)
 
-    val arcRect = Rect(
-        topLeft = Offset(centerX - ovalRadiusX, centerY + ovalRadiusY * 3),
-        bottomRight = Offset(centerX + ovalRadiusX, centerY + ovalRadiusY * 3 + ovalRadiusY)
-    )
+        // Close the path to complete the shape
+        cylinderPath.close()
+        drawPath(cylinderPath, color)
 
-    // Draw the arc connecting the lines
-    val path = Path().apply {
+        drawOval(
+            color = Color.Black, topLeft = Offset(centerX - ovalRadiusX, centerY - ovalRadiusY),
+            size = Size(ovalRadiusX * 2, ovalRadiusY * 2), style = Stroke(10f)
+        )
 
-        arcTo(rect = arcRect, startAngleDegrees = 0f, sweepAngleDegrees = 180f, forceMoveTo = false)
+        val arcRect = Rect(
+            topLeft = Offset(centerX - ovalRadiusX, centerY + ovalRadiusY * 3),
+            bottomRight = Offset(centerX + ovalRadiusX, centerY + ovalRadiusY * 3 + ovalRadiusY)
+        )
+        // Draw the arc connecting the lines
+        val path = Path().apply {
+            arcTo(
+                rect = arcRect,
+                startAngleDegrees = 0f,
+                sweepAngleDegrees = 180f,
+                forceMoveTo = false
+            )
+        }
+        drawPath(path, color = color)
     }
-    drawPath(path, color = color, style = Stroke(10f, cap = StrokeCap.Round))
+    else {
+        // Draw the oval top
+        drawOval(
+            color = color, topLeft = Offset(centerX - ovalRadiusX, centerY - ovalRadiusY),
+            size = Size(ovalRadiusX * 2, ovalRadiusY * 2), style = Stroke(10f)
+        )
+        // Draw lines down from the oval
+        drawLine(color, startPointLeft, endPointLeft, strokeWidth = 10f, cap = StrokeCap.Round)
+        drawLine(color, startPointRight, endPointRight, strokeWidth = 10f, cap = StrokeCap.Round)
+
+        val arcRect = Rect(
+            topLeft = Offset(centerX - ovalRadiusX, centerY + ovalRadiusY * 3),
+            bottomRight = Offset(centerX + ovalRadiusX, centerY + ovalRadiusY * 3 + ovalRadiusY)
+        )
+        // Draw the arc connecting the lines
+        val path = Path().apply {
+            arcTo(
+                rect = arcRect,
+                startAngleDegrees = 0f,
+                sweepAngleDegrees = 180f,
+                forceMoveTo = false
+            )
+        }
+        drawPath(path, color = color, style = Stroke(10f, cap = StrokeCap.Round))
+    }
 }
 
 fun DrawScope.drawStar(
@@ -2129,7 +2297,8 @@ fun DrawScope.drawStar(
     centerY: Float,
     radius: Float,
     numPoints: Int,
-    color: Color
+    color: Color,
+    isFilled: Boolean
 ) {
     val outerAngle = 2 * PI / numPoints // Angle between each outer point
     val halfAngle = PI / numPoints // Half the angle between the points of the star
@@ -2149,24 +2318,37 @@ fun DrawScope.drawStar(
         currentAngle += if (i % 2 == 0) halfAngle else outerAngle - halfAngle
     }
 
-    // Draw lines between the points to form the star
-    repeat(numPoints * 2 - 1) { i ->
+    if(isFilled){
+        val path = Path()
+
+        path.moveTo(points[0].x, points[0].y)
+        for (i in 1 until points.size) {
+            path.lineTo(points[i].x, points[i].y)
+        }
+        path.close()
+
+        drawPath(path, color)
+    }
+    else {
+        // Draw lines between the points to form the star
+        repeat(numPoints * 2 - 1) { i ->
+            drawLine(
+                color = color,
+                start = points[i],
+                end = points[i + 1],
+                strokeWidth = 10f,
+                cap = StrokeCap.Round
+            )
+        }
+
         drawLine(
             color = color,
-            start = points[i],
-            end = points[i + 1],
+            start = points.last(),
+            end = points.first(),
             strokeWidth = 10f,
             cap = StrokeCap.Round
         )
     }
-
-    drawLine(
-        color = color,
-        start = points.last(),
-        end = points.first(),
-        strokeWidth = 10f,
-        cap = StrokeCap.Round
-    )
 }
 
 private fun DrawScope.drawText(text: String, x: Float, y: Float, paint: Paint) {
@@ -2218,25 +2400,61 @@ fun Clock(
 
 @Composable
 fun SelectionIcons(
-    isShown: Boolean = false
+    rect: Rectangle,
+    context: Context,
+    deleteSelected: () -> Unit,
+    colorClicked: (color: Color) -> Unit,
+    fillSelected: () -> Unit,
+    onChangeMoveMode: () -> Unit,
 ) {
-    if (isShown) {
+    var showColorCircles by remember { mutableStateOf(false) }
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+
+    val sizeNum = when {
+        screenWidthDp > 2000 -> 4
+        screenWidthDp > 1000 -> 3
+        screenWidthDp > 800 -> 2
+        else -> 1
+    }
+
+    Column (
+        modifier = Modifier.offset(
+            //rect in pixels -> /2 (if tablet) /4 (if panel) to dp
+            x = (rect.leftTop.x / sizeNum).dp,
+            y = (rect.leftTop.y / sizeNum + rect.height / sizeNum).dp
+        )
+    ) {
         Row {
-            IconButton(onClick = { /*TODO*/ }) {
+            IconButton(onClick = {
+                onChangeMoveMode()
+            }) {
                 Icon(
                     painter = painterResource(R.drawable.baseline_move_24),
                     contentDescription = null,
                     tint = Color.LightGray
                 )
             }
-            IconButton(onClick = { /*TODO*/ }) {
+            IconButton(onClick = {
+                showColorCircles = !showColorCircles
+            }) {
                 Icon(
-                    painter = painterResource(R.drawable.baseline_cancel_24),
+                    painter = painterResource(R.drawable.figure_circle_24),
                     contentDescription = null,
                     tint = Color.LightGray
                 )
             }
-            IconButton(onClick = { /*TODO*/ }) {
+            IconButton(onClick = {
+                fillSelected()
+            }) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_format_color_fill_24),
+                    contentDescription = null,
+                    tint = Color.LightGray
+                )
+            }
+            IconButton(onClick = {
+                deleteSelected()
+            }) {
                 Icon(
                     painter = painterResource(R.drawable.baseline_cancel_24),
                     contentDescription = null,
@@ -2244,5 +2462,126 @@ fun SelectionIcons(
                 )
             }
         }
+
+        if(showColorCircles) {
+            Column {
+                Row {
+                    for (i in 0 until 4) {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = when (i) {
+                                        0 -> {
+                                            Color.Black
+                                        }
+
+                                        1 -> {
+                                            Color.Red
+                                        }
+
+                                        2 -> {
+                                            Color.Blue
+                                        }
+
+                                        3 -> {
+                                            Color.Green
+                                        }
+
+                                        else -> {
+                                            Color.Black
+                                        }
+                                    },
+                                    shape = CircleShape
+                                )
+                                .size(25.dp)
+                                .clickable {
+                                    colorClicked(
+                                        when (i) {
+                                            0 -> {
+                                                Color.Black
+                                            }
+
+                                            1 -> {
+                                                Color.Red
+                                            }
+
+                                            2 -> {
+                                                Color.Blue
+                                            }
+
+                                            3 -> {
+                                                Color.Green
+                                            }
+
+                                            else -> {
+                                                Color.Black
+                                            }
+                                        }
+                                    )
+                                }
+                        )
+                    }
+                }
+                Row {
+                    for (i in 0 until 4) {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = when (i) {
+                                        0 -> {
+                                            Color.Yellow
+                                        }
+
+                                        1 -> {
+                                            Color.Cyan
+                                        }
+
+                                        2 -> {
+                                            Color.Magenta
+                                        }
+
+                                        3 -> {
+                                            Color.Gray
+                                        }
+
+                                        else -> {
+                                            Color.Black
+                                        }
+                                    },
+                                    shape = CircleShape
+                                )
+                                .size(25.dp)
+                                .clickable {
+                                    colorClicked(
+                                        when (i) {
+                                            0 -> {
+                                                Color.Yellow
+                                            }
+
+                                            1 -> {
+                                                Color.Cyan
+                                            }
+
+                                            2 -> {
+                                                Color.Magenta
+                                            }
+
+                                            3 -> {
+                                                Color.Gray
+                                            }
+
+                                            else -> {
+                                                Color.Black
+                                            }
+                                        }
+                                    )
+                                }
+                        )
+                    }
+                }
+            }
+        }
+
     }
+
 }
