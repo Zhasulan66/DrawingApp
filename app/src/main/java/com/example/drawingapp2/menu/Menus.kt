@@ -46,6 +46,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -102,167 +104,442 @@ fun DrawingPropertiesMenu(
     var currentDrawMode = drawMode
 
 
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .background(Color.Gray)
-                .padding(horizontal = 10.dp)
+    Row (modifier = modifier) {
+
+        Row(
+            horizontalArrangement = Arrangement.Center
         ) {
-            IconButton(
-                onClick = {
-                    /*currentDrawMode = if (currentDrawMode == DrawMode.Touch) {
+            Spacer(Modifier.width(5.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(topStart = 5.dp, bottomStart = 5.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*TODO*/
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_menu),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Menu", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*TODO*/
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_exit),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Exit", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*TODO*/
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_qr),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "QR code", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*TODO*/
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_list),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "List", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.width(20.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(topStart = 5.dp, bottomStart = 5.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*currentDrawMode = if (currentDrawMode == DrawMode.Touch) {
                         DrawMode.Draw
                     } else {
                         DrawMode.Touch
                     }
                     onDrawModeChanged(currentDrawMode)*/
-                    currentDrawMode = DrawMode.Touch
-                    onDrawModeChanged(currentDrawMode)
+                        currentDrawMode = DrawMode.Touch
+                        onDrawModeChanged(currentDrawMode)
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_move),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Move", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
                 }
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_touch_app_black_24),
-                    contentDescription = null,
-                    tint = if (currentDrawMode == DrawMode.Touch) Color.Black else Color.LightGray
-                )
             }
-        }
-        Box(
-            modifier = Modifier
-                .background(Color.Gray)
-                .padding(horizontal = 10.dp)
-        ) {
-            IconButton(
-                onClick = {
-                    /*currentDrawMode = if (currentDrawMode == DrawMode.Erase) {
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*currentDrawMode = if (currentDrawMode == DrawMode.Erase) {
                         DrawMode.Draw
                     } else {
                         DrawMode.Erase
                     }*/
-                    /* currentDrawMode = DrawMode.Erase
+                        /* currentDrawMode = DrawMode.Erase
                      onDrawModeChanged(currentDrawMode)*/
-                    showEraserDialog = !showEraserDialog
+                        showEraserDialog = !showEraserDialog
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_eraser),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Eraser", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
                 }
+            }
+
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_eraser_black_24dp),
-                    contentDescription = null,
-                    tint = if (currentDrawMode == DrawMode.Erase) Color.Black else Color.LightGray
-                )
+                IconButton(
+                    onClick = {
+                        /*currentDrawMode = if (currentDrawMode == DrawMode.Erase) {
+                        DrawMode.Draw
+                    } else {
+                        DrawMode.Erase
+                    }*/
+                        /* currentDrawMode = DrawMode.Erase
+                     onDrawModeChanged(currentDrawMode)*/
+                        showEraserDialog = !showEraserDialog
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_delete),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Clear", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
             }
+
+            Box(
+                modifier = Modifier
+                    .background(if (currentDrawMode == DrawMode.Selection) Color.Black else Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(onClick = {
+                    currentDrawMode = DrawMode.Selection
+                    onDrawModeChanged(currentDrawMode)
+
+                }) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_select),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Select", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(onClick = {
+                    showPropertiesDialog = !showPropertiesDialog
+                    currentDrawMode = DrawMode.Draw
+                    onDrawModeChanged(currentDrawMode)
+
+                }) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_pen),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Pencil", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(onClick = { showBackgroundDialog = !showBackgroundDialog }) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_theme),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Theme", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(onClick = { //drawmode and dialog
+                    showFigureDialog = !showFigureDialog
+                }) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_figure),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Figure", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(onClick = { showFeatureDialog = !showFeatureDialog }) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_choose),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Choose", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(onClick = {
+                    onUndo()
+                }) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_undo),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Undo", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(onClick = {
+                    onRedo()
+                }) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_redo),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Redo", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+
         }
 
-        Box(
-            modifier = Modifier
-                .background(if(currentDrawMode == DrawMode.Selection) Color.Black else Color.Gray)
-                .padding(horizontal = 10.dp)
+        Spacer(Modifier.width(20.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.Center
         ) {
-            IconButton(onClick = {
-                currentDrawMode = DrawMode.Selection
-                onDrawModeChanged(currentDrawMode)
-
-            }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.baseline_fit_screen_24),
-                    contentDescription = null, tint = Color.LightGray
-                )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(topStart = 5.dp, bottomStart = 5.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*TODO*/
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_add),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Add", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*TODO*/
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_back),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Back", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*TODO*/
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "1/2", fontSize = 12.sp, color = Color.Black, modifier = Modifier.padding(vertical = 3.dp))
+                        Text(text = "Page", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        /*TODO*/
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_forward),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(text = "Forward", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                    }
+                }
             }
         }
-
-        Box(
-            modifier = Modifier
-                .background(Color.Gray)
-                .padding(horizontal = 10.dp)
-        ) {
-            IconButton(onClick = {
-                showPropertiesDialog = !showPropertiesDialog
-                currentDrawMode = DrawMode.Draw
-                onDrawModeChanged(currentDrawMode)
-
-            }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_brush_black_24),//selection
-                    contentDescription = null, tint = Color.LightGray
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .background(Color.Gray)
-                .padding(horizontal = 10.dp)
-        ) {
-            IconButton(onClick = { showBackgroundDialog = !showBackgroundDialog }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_color_bg_black_24),
-                    contentDescription = null, tint = Color.LightGray
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .background(Color.Gray)
-                .padding(horizontal = 10.dp)
-        ) {
-            IconButton(onClick = { //drawmode and dialog
-                showFigureDialog = !showFigureDialog
-            }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.baseline_shape_line_24),
-                    contentDescription = null, tint = Color.LightGray
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .background(Color.Gray)
-                .padding(horizontal = 10.dp)
-        ) {
-            IconButton(onClick = { showFeatureDialog = !showFeatureDialog }) {
-                Icon(
-                    painter = painterResource(id = R.drawable.baseline_hive_24),
-                    contentDescription = null, tint = Color.LightGray
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .background(Color.Gray)
-                .padding(horizontal = 10.dp)
-        ) {
-            IconButton(onClick = {
-                onUndo()
-            }) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_undo_black_24),
-                    contentDescription = null,
-                    tint = Color.LightGray
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .background(Color.Gray)
-                .padding(horizontal = 10.dp)
-        ) {
-            IconButton(onClick = {
-                onRedo()
-            }) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_redo_black_24),
-                    contentDescription = null,
-                    tint = Color.LightGray
-                )
-            }
-        }
-
     }
 
     if (showEraserDialog) {
@@ -1581,10 +1858,12 @@ fun TimerDialog(
 
     var expandMode by remember { mutableStateOf(false) }
 
-    val expandModeModifier = Modifier.fillMaxSize()
+    val expandModeModifier = Modifier
+        .fillMaxSize()
         .background(Color.Black)
 
-    val commonModeModifier = Modifier.width(300.dp)
+    val commonModeModifier = Modifier
+        .width(300.dp)
         .height(150.dp)
         .offset(
             x = (myOffset.x / 3).dp,
@@ -1613,15 +1892,16 @@ fun TimerDialog(
 
         Column(
             modifier = Modifier
-                .fillMaxSize().then(
-                    if (expandMode){
-                    Modifier
-                        .pointerInput(Unit) {
-                            detectTapGestures{
-                                expandMode =!expandMode
+                .fillMaxSize()
+                .then(
+                    if (expandMode) {
+                        Modifier
+                            .pointerInput(Unit) {
+                                detectTapGestures {
+                                    expandMode = !expandMode
+                                }
                             }
-                        }
-                     }else Modifier
+                    } else Modifier
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center

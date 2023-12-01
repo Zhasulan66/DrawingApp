@@ -1,7 +1,6 @@
 package com.example.drawingapp2
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.graphics.Matrix
@@ -39,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -73,6 +71,7 @@ import com.example.drawingapp2.gesture.MotionEvent
 import com.example.drawingapp2.gesture.dragMotionEvent
 import com.example.drawingapp2.menu.DrawingPropertiesMenu
 import com.example.drawingapp2.model.*
+import com.example.drawingapp2.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -169,7 +168,7 @@ fun DrawingApp() {
     var selectionRect by remember { mutableStateOf(emptyList<Rectangle>()) }
 
     //field background color
-    var currentBackgroundColor by remember { mutableStateOf(Color.White) }
+    var currentBackgroundColor by remember { mutableStateOf(Green800) }
     var bgType by remember { mutableStateOf(0) }
     val myTable by remember { mutableStateOf(Table()) }
 
@@ -1571,7 +1570,7 @@ fun DrawingApp() {
                 if (drawMode == DrawMode.LineDraw) {
                     temporaryLine?.let { line ->
                         drawLine(
-                            color = Color.Gray,
+                            color = line.color,
                             start = Offset(line.start.x, line.start.y),
                             end = Offset(line.end.x, line.end.y),
                             strokeWidth = 10f
@@ -1583,7 +1582,7 @@ fun DrawingApp() {
                 if (drawMode == DrawMode.DashLineDraw) {
                     temporaryDashedLine?.let { dashedLine ->
                         drawLine(
-                            color = Color.Gray,
+                            color = dashedLine.color,
                             start = Offset(dashedLine.start.x, dashedLine.start.y),
                             end = Offset(dashedLine.end.x, dashedLine.end.y),
                             strokeWidth = 10f,
@@ -1666,21 +1665,21 @@ fun DrawingApp() {
                 if (drawMode == DrawMode.TriangleDraw) {
                     temporaryTriangle?.let { triangle ->
                         drawLine(
-                            color = Color.Gray,
+                            color = triangle.color,
                             start = triangle.point1,
                             end = triangle.point2,
                             strokeWidth = 10f,
                             cap = StrokeCap.Round
                         )
                         drawLine(
-                            color = Color.Gray,
+                            color = triangle.color,
                             start = triangle.point2,
                             end = triangle.point3,
                             strokeWidth = 10f,
                             cap = StrokeCap.Round
                         )
                         drawLine(
-                            color = Color.Gray,
+                            color = triangle.color,
                             start = triangle.point3,
                             end = triangle.point1,
                             strokeWidth = 10f,
@@ -1729,28 +1728,28 @@ fun DrawingApp() {
                     temporaryTrapezoid?.let { trapezoid ->
                         val points = trapezoid.points
                         drawLine(
-                            color = Color.Gray,
+                            color = trapezoid.color,
                             start = points[0],
                             end = points[1],
                             strokeWidth = 10f,
                             cap = StrokeCap.Round
                         )
                         drawLine(
-                            color = Color.Gray,
+                            color = trapezoid.color,
                             start = points[1],
                             end = points[2],
                             strokeWidth = 10f,
                             cap = StrokeCap.Round
                         )
                         drawLine(
-                            color = Color.Gray,
+                            color = trapezoid.color,
                             start = points[2],
                             end = points[3],
                             strokeWidth = 10f,
                             cap = StrokeCap.Round
                         )
                         drawLine(
-                            color = Color.Gray,
+                            color = trapezoid.color,
                             start = points[3],
                             end = points[0],
                             strokeWidth = 10f,
@@ -1763,7 +1762,7 @@ fun DrawingApp() {
                 if (drawMode == DrawMode.RectDraw) {
                     temporaryRectangle?.let { rectangle ->
                         drawRect(
-                            color = Color.Gray, // Adjust color for temporary rectangle
+                            color = rectangle.color, // Adjust color for temporary rectangle
                             topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
                             size = Size(rectangle.width, rectangle.height),
                             style = Stroke(10f)
@@ -1775,7 +1774,7 @@ fun DrawingApp() {
                 if (drawMode == DrawMode.RoundRectDraw) {
                     temporaryRoundRectangle?.let { rectangle ->
                         drawRoundRect(
-                            color = Color.Gray,
+                            color = rectangle.color,
                             topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
                             size = Size(rectangle.width, rectangle.height),
                             style = Stroke(10f),
@@ -1788,7 +1787,7 @@ fun DrawingApp() {
                 if (drawMode == DrawMode.CircleDraw) {
                     temporaryCircle?.let { circle ->
                         drawCircle(
-                            color = Color.Gray, // Adjust color for temporary circle
+                            color = circle.color, // Adjust color for temporary circle
                             center = Offset(circle.center.x, circle.center.y),
                             radius = circle.radius,
                             style = Stroke(10f)
@@ -1865,7 +1864,7 @@ fun DrawingApp() {
                             centerY = cylinder.center.y,
                             ovalRadiusX = cylinder.ovalRadiusX,
                             ovalRadiusY = cylinder.ovalRadiusY,
-                            color = Color.Gray,
+                            color = cylinder.color,
                             isFilled = cylinder.isFilled
                         )
                     }
@@ -1879,7 +1878,7 @@ fun DrawingApp() {
                             centerY = star.center.y,
                             radius = star.radius,
                             numPoints = star.numPoints,
-                            color = Color.Gray,
+                            color = star.color,
                             isFilled = star.isFilled
                         )
                     }
@@ -1888,17 +1887,6 @@ fun DrawingApp() {
                 //selection rect drawing
                 if (drawMode == DrawMode.Selection
                     || drawMode == DrawMode.MoveSelection) {
-                    /*selectionRectangle?.let { rectangle ->
-                        drawRect(
-                            color = Color.Red,
-                            topLeft = Offset(rectangle.leftTop.x, rectangle.leftTop.y),
-                            size = Size(rectangle.width, rectangle.height),
-                            style = Stroke(
-                                10f,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f)
-                            )
-                        )
-                    }*/
 
                     if (isFigureSelected) {
                         selectionRectangle?.let { rectangle ->
@@ -1942,17 +1930,6 @@ fun DrawingApp() {
                         )
                     )
 
-                    /*if (showColorCircles) {
-                        colorCircles.forEach { circle ->
-                            drawCircle(
-                                color = circle.color,
-                                center = Offset(circle.center.x, circle.center.y),
-                                radius = circle.radius,
-                                //style = Stroke(10f)
-                            )
-                        }
-                    }*/
-
                 }
 
                 paths.forEach {
@@ -1985,8 +1962,6 @@ fun DrawingApp() {
                         )
                     }
                 }
-
-
 
                 if (motionEvent != MotionEvent.Idle) {
 
@@ -2022,7 +1997,6 @@ fun DrawingApp() {
             //selectionRectangle is empty here
             SelectionIcons(
                 rect = selectionRect[0],
-                context = context,
                 deleteSelected = {
                     figures.forEach { figure ->
                         if(figure.isSelected){
@@ -2067,8 +2041,9 @@ fun DrawingApp() {
 
         DrawingPropertiesMenu(
             modifier = Modifier
+                .offset(y = (-20).dp)
                 .background(currentBackgroundColor)
-                .align(alignment = Alignment.BottomCenter),
+                .align(alignment = Alignment.BottomStart),
             pathProperties = currentPathProperty,
             drawMode = drawMode,
             currentBackgroundColor = currentBackgroundColor,
@@ -2401,7 +2376,6 @@ fun Clock(
 @Composable
 fun SelectionIcons(
     rect: Rectangle,
-    context: Context,
     deleteSelected: () -> Unit,
     colorClicked: (color: Color) -> Unit,
     fillSelected: () -> Unit,
@@ -2412,7 +2386,7 @@ fun SelectionIcons(
 
     val sizeNum = when {
         screenWidthDp > 2000 -> 4
-        screenWidthDp > 1000 -> 3
+        screenWidthDp > 1300 -> 3
         screenWidthDp > 800 -> 2
         else -> 1
     }
