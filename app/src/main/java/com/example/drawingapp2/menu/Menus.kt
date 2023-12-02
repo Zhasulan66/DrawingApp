@@ -6,8 +6,10 @@ import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -35,6 +37,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,8 +55,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
@@ -68,7 +70,7 @@ import com.example.drawingapp2.DrawMode
 import com.example.drawingapp2.R
 import com.example.drawingapp2.model.PathProperties
 import com.example.drawingapp2.model.TimeUnit
-import com.example.drawingapp2.ui.theme.Blue400
+import com.example.drawingapp2.ui.theme.*
 import com.godaddy.android.colorpicker.ClassicColorPicker
 import com.godaddy.android.colorpicker.HsvColor
 
@@ -104,8 +106,9 @@ fun DrawingPropertiesMenu(
     var currentDrawMode = drawMode
 
 
-    Row (modifier = modifier) {
+    Row(modifier = modifier) {
 
+        //left row
         Row(
             horizontalArrangement = Arrangement.Center
         ) {
@@ -129,7 +132,12 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Menu", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Menu",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
@@ -151,7 +159,12 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Exit", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Exit",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
@@ -173,7 +186,12 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "QR code", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "QR code",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
@@ -196,7 +214,12 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "List", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "List",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
@@ -204,102 +227,15 @@ fun DrawingPropertiesMenu(
 
         Spacer(Modifier.width(20.dp))
 
+        //center row
         Row(
             horizontalArrangement = Arrangement.Center
         ) {
+            //select
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(topStart = 5.dp, bottomStart = 5.dp))
-                    .background(Color.White)
-                    .padding(horizontal = 10.dp)
-            ) {
-                IconButton(
-                    onClick = {
-                        /*currentDrawMode = if (currentDrawMode == DrawMode.Touch) {
-                        DrawMode.Draw
-                    } else {
-                        DrawMode.Touch
-                    }
-                    onDrawModeChanged(currentDrawMode)*/
-                        currentDrawMode = DrawMode.Touch
-                        onDrawModeChanged(currentDrawMode)
-                    }
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.menu_icon_move),
-                            contentDescription = null,
-                            tint = Color.Unspecified
-                        )
-                        Text(text = "Move", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
-                    }
-                }
-            }
-            Box(
-                modifier = Modifier
-                    .background(Color.White)
-                    .padding(horizontal = 10.dp)
-            ) {
-                IconButton(
-                    onClick = {
-                        /*currentDrawMode = if (currentDrawMode == DrawMode.Erase) {
-                        DrawMode.Draw
-                    } else {
-                        DrawMode.Erase
-                    }*/
-                        /* currentDrawMode = DrawMode.Erase
-                     onDrawModeChanged(currentDrawMode)*/
-                        showEraserDialog = !showEraserDialog
-                    }
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.menu_icon_eraser),
-                            contentDescription = null,
-                            tint = Color.Unspecified
-                        )
-                        Text(text = "Eraser", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .background(Color.White)
-                    .padding(horizontal = 10.dp)
-            ) {
-                IconButton(
-                    onClick = {
-                        /*currentDrawMode = if (currentDrawMode == DrawMode.Erase) {
-                        DrawMode.Draw
-                    } else {
-                        DrawMode.Erase
-                    }*/
-                        /* currentDrawMode = DrawMode.Erase
-                     onDrawModeChanged(currentDrawMode)*/
-                        showEraserDialog = !showEraserDialog
-                    }
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.menu_icon_delete),
-                            contentDescription = null,
-                            tint = Color.Unspecified
-                        )
-                        Text(text = "Clear", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .background(if (currentDrawMode == DrawMode.Selection) Color.Black else Color.White)
+                    .background(if (currentDrawMode == DrawMode.Selection) Color.LightGray else Color.White)
                     .padding(horizontal = 10.dp)
             ) {
                 IconButton(onClick = {
@@ -315,14 +251,19 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Select", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Select",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
-
+            //pencil
             Box(
                 modifier = Modifier
-                    .background(Color.White)
+                    .background(if (currentDrawMode == DrawMode.Draw) Color.LightGray else Color.White)
                     .padding(horizontal = 10.dp)
             ) {
                 IconButton(onClick = {
@@ -339,33 +280,85 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Pencil", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Pencil",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
-
+            //eraser
+            Box(
+                modifier = Modifier
+                    .background(if (currentDrawMode == DrawMode.Erase) Color.LightGray else Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        showEraserDialog = !showEraserDialog
+                        currentDrawMode = DrawMode.Erase
+                        onDrawModeChanged(currentDrawMode)
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_eraser),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(
+                            text = "Eraser",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
+                    }
+                }
+            }
+            //clear all
             Box(
                 modifier = Modifier
                     .background(Color.White)
                     .padding(horizontal = 10.dp)
             ) {
-                IconButton(onClick = { showBackgroundDialog = !showBackgroundDialog }) {
+                IconButton(
+                    onClick = {
+                        onClearAll()
+                    }
+                ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.menu_icon_theme),
+                            painter = painterResource(id = R.drawable.menu_icon_delete),
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Theme", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Clear",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
-
+            //figure
             Box(
                 modifier = Modifier
-                    .background(Color.White)
+                    .background(
+                        if (
+                            currentDrawMode != DrawMode.Draw &&
+                            currentDrawMode != DrawMode.Touch &&
+                            currentDrawMode != DrawMode.Erase &&
+                            currentDrawMode != DrawMode.Selection &&
+                            currentDrawMode != DrawMode.MoveSelection
+                        ) Color.LightGray else Color.White
+                    )
                     .padding(horizontal = 10.dp)
             ) {
                 IconButton(onClick = { //drawmode and dialog
@@ -379,14 +372,19 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Figure", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Figure",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
-
+            //choose
             Box(
                 modifier = Modifier
-                    .background(Color.White)
+                    .background(if (showFeatureDialog) Color.LightGray else Color.White)
                     .padding(horizontal = 10.dp)
             ) {
                 IconButton(onClick = { showFeatureDialog = !showFeatureDialog }) {
@@ -398,11 +396,69 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Choose", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Choose",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
-
+            //move
+            Box(
+                modifier = Modifier
+                    .background(if (currentDrawMode == DrawMode.Touch) Color.LightGray else Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        currentDrawMode = DrawMode.Touch
+                        onDrawModeChanged(currentDrawMode)
+                    }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_move),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(
+                            text = "Move",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
+                    }
+                }
+            }
+            //theme
+            Box(
+                modifier = Modifier
+                    .background(if (showBackgroundDialog) Color.LightGray else Color.White)
+                    .padding(horizontal = 10.dp)
+            ) {
+                IconButton(onClick = { showBackgroundDialog = !showBackgroundDialog }) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.menu_icon_theme),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                        Text(
+                            text = "Theme",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
+                    }
+                }
+            }
+            //undo
             Box(
                 modifier = Modifier
                     .background(Color.White)
@@ -419,11 +475,16 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Undo", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Undo",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
-
+            //redo
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp))
@@ -441,7 +502,12 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Redo", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Redo",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
@@ -450,6 +516,7 @@ fun DrawingPropertiesMenu(
 
         Spacer(Modifier.width(20.dp))
 
+        //right row
         Row(
             horizontalArrangement = Arrangement.Center
         ) {
@@ -472,7 +539,12 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Add", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Add",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
@@ -494,7 +566,12 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Back", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Back",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
@@ -511,8 +588,18 @@ fun DrawingPropertiesMenu(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = "1/2", fontSize = 12.sp, color = Color.Black, modifier = Modifier.padding(vertical = 3.dp))
-                        Text(text = "Page", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "1/2",
+                            fontSize = 12.sp,
+                            color = Color.Black,
+                            modifier = Modifier.padding(vertical = 3.dp)
+                        )
+                        Text(
+                            text = "Page",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
@@ -535,208 +622,115 @@ fun DrawingPropertiesMenu(
                             contentDescription = null,
                             tint = Color.Unspecified
                         )
-                        Text(text = "Forward", fontSize = 10.sp, color = Color.Black, modifier = Modifier.alpha(0.7f))
+                        Text(
+                            text = "Forward",
+                            fontSize = 10.sp,
+                            color = Color.Black,
+                            modifier = Modifier.alpha(0.7f)
+                        )
                     }
                 }
             }
         }
     }
 
-    if (showEraserDialog) {
-        EraserSelectionDialog(
-            properties,
-            onDismiss = { showEraserDialog = !showEraserDialog },
-            onClearAll = {
-                showEraserDialog = !showEraserDialog
-                onClearAll()
-            },
-            changeToEraseMode = {
-                showEraserDialog = !showEraserDialog
-                currentDrawMode = DrawMode.Erase
-                onDrawModeChanged(currentDrawMode)
-            }
-        )
-    }
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
 
-    if (showPropertiesDialog) {
-        PropertiesMenuDialog(
-            pathOption = properties,
-            onDismiss = {
-                showPropertiesDialog = !showPropertiesDialog
-            },
-            onOpenColorPicker = {
+        if (showEraserDialog) {
+            EraserSelectionDialog(
+                properties,
+                onDismiss = { showEraserDialog = !showEraserDialog },
+            )
+        }
+
+        if (showPropertiesDialog) {
+            PropertiesMenuDialog(
+                pathOption = properties,
+                onDismiss = {
+                    showPropertiesDialog = !showPropertiesDialog
+                },
+                onOpenColorPicker = {
+                    showColorPicker = !showColorPicker
+                }
+            )
+        }
+
+        if (showColorPicker) {
+            ColorPickerDialog(properties) {
                 showColorPicker = !showColorPicker
             }
-        )
-    }
-
-    if (showColorPicker) {
-        ColorPickerDialog(properties) {
-            showColorPicker = !showColorPicker
         }
-    }
 
-    if (showBackgroundDialog) {
-        BackgroundSelectionDialog(
-            bgColor,
-            onDismiss = { showBackgroundDialog = !showBackgroundDialog },
-            onNegativeClick = { showBackgroundDialog = !showBackgroundDialog },
-            onPositiveClick = { color: Color, bgType: Int ->
-                showBackgroundDialog = !showBackgroundDialog
-                bgColor = color
-                onBgChanged(bgColor, bgType)
-            }
-        )
-    }
-
-    if (showFigureDialog) {
-        FigureDialog(
-            onDismiss = {
-                showFigureDialog = !showFigureDialog
-            },
-            onDrawModeChanged = {
-                //dismiss included :)
-                currentDrawMode = it
-                onDrawModeChanged(currentDrawMode)
-            }
-        )
-    }
-
-    if (showFeatureDialog) {
-        FeatureDialog(
-            onDismiss = {
-                showFeatureDialog = !showFeatureDialog
-            },
-            openTableDialog = {
-                showTableDialog = !showTableDialog
-            },
-            openWebDialog = {
-                showWebDialog = !showWebDialog
-            },
-            openTimerDialog = {
-                showTimerDialog = !showTimerDialog
-            },
-            launcher = myLauncher
-        )
-    }
-
-    if (showTableDialog) {
-        TableDialog(
-            { showTableDialog = !showTableDialog }, { showTableDialog = !showTableDialog },
-            onPositiveClick = { rowInt, columnInt ->
-                showTableDialog = !showTableDialog
-                onDrawTable(rowInt, columnInt)
-            }
-        )
-    }
-
-    if (showWebDialog) {
-        WebDialog()
-    }
-
-    if (showTimerDialog) {
-        TimerDialog(
-            onShowTimerDialog = {
-                showTimerDialog = !showTimerDialog
-            }
-        )
-    }
-
-}
-
-@Composable
-fun EraserSelectionDialog(
-    pathOption: PathProperties,
-    onDismiss: () -> Unit,
-    onClearAll: () -> Unit,
-    changeToEraseMode: () -> Unit
-) {
-
-    var strokeWidth by remember { mutableStateOf(pathOption.strokeWidth) }
-
-    //Dialog(onDismissRequest = { onDismiss() }) {
-
-        Card(
-            //elevation = 2.dp,
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp)
-        ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-
-                Text(
-                    text = "Eraser",
-                    color = Blue400,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 12.dp, top = 12.dp)
-                )
-
-                Canvas(
-                    modifier = Modifier
-                        .padding(horizontal = 24.dp, vertical = 20.dp)
-                        .height(40.dp)
-                        .fillMaxWidth()
-                ) {
-                    val path = Path()
-                    path.moveTo(0f, size.height / 2)
-                    path.lineTo(size.width / 2, size.height / 2)
-
-                    drawPath(
-                        color = Color.Gray,
-                        path = path,
-                        style = Stroke(
-                            width = strokeWidth
-                        )
-                    )
+        if (showBackgroundDialog) {
+            BackgroundSelectionDialog(
+                bgColor,
+                onDismiss = { showBackgroundDialog = !showBackgroundDialog },
+                onNegativeClick = { showBackgroundDialog = !showBackgroundDialog },
+                onPositiveClick = { color: Color, bgType: Int ->
+                    showBackgroundDialog = !showBackgroundDialog
+                    bgColor = color
+                    onBgChanged(bgColor, bgType)
                 }
-
-                Text(
-                    text = "Stroke Width ${strokeWidth.toInt()}",
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                Slider(
-                    value = strokeWidth,
-                    onValueChange = {
-                        strokeWidth = it
-                        pathOption.strokeWidth = strokeWidth
-                    },
-                    valueRange = 1f..100f,
-                    onValueChangeFinished = {}
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row {
-                    IconButton(
-                        onClick = {
-                            changeToEraseMode()
-                        }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_eraser_black_24dp),
-                            contentDescription = null,
-                            tint = Color.Black
-                        )
-                    }
-
-                    IconButton(onClick = {
-                        onClearAll()
-                        onDismiss()
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_clear_24),
-                            contentDescription = null,
-                            tint = Color.LightGray
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-            }
+            )
         }
-    //}
+
+        if (showFigureDialog) {
+            FigureDialog(
+                onDismiss = {
+                    showFigureDialog = !showFigureDialog
+                },
+                onDrawModeChanged = {
+                    //dismiss included :)
+                    currentDrawMode = it
+                    onDrawModeChanged(currentDrawMode)
+                }
+            )
+        }
+
+        if (showFeatureDialog) {
+            FeatureDialog(
+                onDismiss = {
+                    showFeatureDialog = !showFeatureDialog
+                },
+                openTableDialog = {
+                    showTableDialog = !showTableDialog
+                },
+                openWebDialog = {
+                    showWebDialog = !showWebDialog
+                },
+                openTimerDialog = {
+                    showTimerDialog = !showTimerDialog
+                },
+                launcher = myLauncher
+            )
+        }
+
+        if (showTableDialog) {
+            TableDialog(
+                { showTableDialog = !showTableDialog }, { showTableDialog = !showTableDialog },
+                onPositiveClick = { rowInt, columnInt ->
+                    showTableDialog = !showTableDialog
+                    onDrawTable(rowInt, columnInt)
+                }
+            )
+        }
+
+        if (showWebDialog) {
+            WebDialog()
+        }
+
+        if (showTimerDialog) {
+            TimerDialog(
+                onShowTimerDialog = {
+                    showTimerDialog = !showTimerDialog
+                }
+            )
+        }
+
+    }
+
 }
 
 @Composable
@@ -745,334 +739,29 @@ fun PropertiesMenuDialog(
     onDismiss: () -> Unit,
     onOpenColorPicker: () -> Unit
 ) {
-
     var strokeWidth by remember { mutableStateOf(pathOption.strokeWidth) }
 
-    Dialog(onDismissRequest = { onDismiss() }) {
-
-        Card(
-            //elevation = 2.dp,
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onDismiss() } // Dismiss dialog on background click
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(y = (-80).dp, x = (-90).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom
         ) {
-
-            val bgColor1 = colorResource(R.color.dark_white)
-            val bgColor2 = colorResource(R.color.light_brown)
-            val bgColor3 = colorResource(R.color.light_green)
-            val bgColor4 = colorResource(R.color.light_blue)
-            val bgColor5 = colorResource(R.color.light_black)
-            val bgColor6 = colorResource(R.color.dark_green)
-            val bgColor7 = colorResource(R.color.dark_blue)
-            val bgColor8 = colorResource(R.color.dark_purple)
-
-            Column(modifier = Modifier.padding(8.dp)) {
-
-                Text(
-                    text = "Properties",
-                    color = Blue400,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 12.dp, top = 12.dp)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    Column {
-
-                        //First couple
-                        Row(
-                            modifier = Modifier,
-                            horizontalArrangement = Arrangement.SpaceAround
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.dark_white),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        pathOption.color = bgColor1
-                                    }
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.light_brown),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        pathOption.color = bgColor2
-                                    }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-                        //Second couple
-                        Row(
-                            modifier = Modifier,
-                            horizontalArrangement = Arrangement.SpaceAround
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.light_green),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        pathOption.color = bgColor3
-                                    }
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.light_blue),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        pathOption.color = bgColor4
-                                    }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-                        //Third couple
-                        Row(
-                            modifier = Modifier,
-                            horizontalArrangement = Arrangement.SpaceAround
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.light_black),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        pathOption.color = bgColor5
-                                    }
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.dark_green),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        pathOption.color = bgColor6
-                                    }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-                        //Fourth couple
-                        Row(
-                            modifier = Modifier,
-                            horizontalArrangement = Arrangement.SpaceAround
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.dark_blue),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        pathOption.color = bgColor7
-                                    }
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.dark_purple),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        pathOption.color = bgColor8
-                                    }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-                        //Fifth couple
-                        Row(
-                            modifier = Modifier,
-                            horizontalArrangement = Arrangement.SpaceAround
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.dark_purple),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        pathOption.color = bgColor8
-                                    }
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(40.dp)
-                                    .height(40.dp)
-                                    .background(
-                                        colorResource(R.color.dark_blue),
-                                        shape = RoundedCornerShape(50.dp)
-                                    )
-                                    .clickable {
-                                        //open color picker dialog
-                                        onOpenColorPicker()
-
-                                    }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .width(20.dp)
-                                .height(20.dp)
-                                .background(
-                                    colorResource(R.color.black),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    pathOption.strokeWidth = 5f
-                                }
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .width(25.dp)
-                                .height(25.dp)
-                                .background(
-                                    colorResource(R.color.black),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    pathOption.strokeWidth = 10f
-                                }
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .width(30.dp)
-                                .height(30.dp)
-                                .background(
-                                    colorResource(R.color.black),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    pathOption.strokeWidth = 50f
-                                }
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .width(35.dp)
-                                .height(35.dp)
-                                .background(
-                                    colorResource(R.color.black),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    pathOption.strokeWidth = 80f
-                                }
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-                                .background(
-                                    colorResource(R.color.black),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    pathOption.strokeWidth = 100f
-                                }
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .width(50.dp)
-                                .height(50.dp)
-                                .background(
-                                    colorResource(R.color.black),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    pathOption.strokeWidth = 150f
-                                }
-                        )
-                    }
-
-                    // Rotating the slider by -90 degrees to make it vertical
-                    Slider(
-                        value = strokeWidth,
-                        onValueChange = {
-                            strokeWidth = it
-                            pathOption.strokeWidth = strokeWidth
-                        },
-                        valueRange = 5f..100f,
-                        onValueChangeFinished = {},
-                        modifier = Modifier
-                            .width(200.dp)//200
-                            .graphicsLayer {
-                                rotationZ = -90f
-                                translationY = 100f
-
-                            }
-                            .width(10.dp),
-                    )
-
-                }
-
-                Canvas(
-                    modifier = Modifier
-                        .padding(horizontal = 24.dp, vertical = 20.dp)
-                        .height(40.dp)
-                        .fillMaxWidth()
-                ) {
-                    val path = Path()
-                    path.moveTo(0f, size.height / 2)
-                    path.lineTo(size.width, size.height / 2)
-
-                    drawPath(
-                        color = pathOption.color,
-                        path = path,
-                        style = Stroke(
-                            width = pathOption.strokeWidth
-                        )
-                    )
-                }
-
-                /*Text(
-                    text = "Stroke Width ${strokeWidth.toInt()}",
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .width(520.dp)
+                    .height(280.dp)
+                    .background(Color.White)
+            ) {
+                Spacer(modifier = Modifier.height(100.dp))
                 Slider(
                     value = strokeWidth,
                     onValueChange = {
@@ -1080,21 +769,267 @@ fun PropertiesMenuDialog(
                         pathOption.strokeWidth = strokeWidth
                     },
                     valueRange = 1f..100f,
-                    onValueChangeFinished = {}
-                )*/
+                    onValueChangeFinished = {},
+                    colors = SliderDefaults.colors(
+                        thumbColor = Sea, // Change thumb color
+                        activeTrackColor = Sea, // Change active track color
+                        inactiveTrackColor = Color.Gray // Change inactive track color
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .align(alignment = Alignment.CenterHorizontally)
+                )
 
-                /*Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor1)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor1.red * 0.8f,
+                                    green = PencilColor1.green * 0.8f,
+                                    blue = PencilColor1.blue * 0.8f,
+                                    alpha = PencilColor1.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor1
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor2)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor2.red * 0.8f,
+                                    green = PencilColor2.green * 0.8f,
+                                    blue = PencilColor2.blue * 0.8f,
+                                    alpha = PencilColor2.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor2
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor3)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor3.red * 0.8f,
+                                    green = PencilColor3.green * 0.8f,
+                                    blue = PencilColor3.blue * 0.8f,
+                                    alpha = PencilColor3.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor3
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor4)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor4.red * 0.8f,
+                                    green = PencilColor4.green * 0.8f,
+                                    blue = PencilColor4.blue * 0.8f,
+                                    alpha = PencilColor4.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor4
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor5)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor5.red * 0.8f,
+                                    green = PencilColor5.green * 0.8f,
+                                    blue = PencilColor5.blue * 0.8f,
+                                    alpha = PencilColor5.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor5
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor6)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor6.red * 0.8f,
+                                    green = PencilColor6.green * 0.8f,
+                                    blue = PencilColor6.blue * 0.8f,
+                                    alpha = PencilColor6.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor6
+                                onDismiss()
+                            }
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor7)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor7.red * 0.8f,
+                                    green = PencilColor7.green * 0.8f,
+                                    blue = PencilColor7.blue * 0.8f,
+                                    alpha = PencilColor7.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor7
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor8)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor8.red * 0.8f,
+                                    green = PencilColor8.green * 0.8f,
+                                    blue = PencilColor8.blue * 0.8f,
+                                    alpha = PencilColor8.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor8
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor9)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor9.red * 0.8f,
+                                    green = PencilColor9.green * 0.8f,
+                                    blue = PencilColor9.blue * 0.8f,
+                                    alpha = PencilColor9.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor9
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor10)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor10.red * 0.8f,
+                                    green = PencilColor10.green * 0.8f,
+                                    blue = PencilColor10.blue * 0.8f,
+                                    alpha = PencilColor10.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor10
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PencilColor11)
+                            .border(
+                                BorderStroke(2.dp, color = Color(
+                                    red = PencilColor11.red * 0.8f,
+                                    green = PencilColor11.green * 0.8f,
+                                    blue = PencilColor11.blue * 0.8f,
+                                    alpha = PencilColor11.alpha
+                                )),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                pathOption.color = PencilColor11
+                                onDismiss()
+                            }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(width = 65.dp, height = 40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White)
+                            .border(
+                                BorderStroke(2.dp, Color.Gray),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            .clickable {
+                                onOpenColorPicker()
+                            }
+                    )
+                }
 
-                ClassicColorPicker(
-                    modifier = Modifier.size(300.dp)
-                        .align(alignment = Alignment.CenterHorizontally),
-                    onColorChanged = { color: HsvColor ->
-                        pathOption.color = color.toColor()
-                    }
-                )*/
+            }
+            Canvas(
+                modifier = Modifier
+                    .size(width = 40.dp, height = 15.dp)
+                    .offset(x = (-140).dp)
+            ) {
+                val path = Path()
 
-                Spacer(modifier = Modifier.height(8.dp))
+                path.moveTo(0f, 0f)
+                path.lineTo(20f, 15f)
+                path.lineTo(40f, 0f)
 
+                drawPath(
+                    path = path,
+                    color = Color.White,
+                )
             }
         }
     }
@@ -1125,253 +1060,63 @@ fun ColorPickerDialog(
 }
 
 @Composable
-fun BackgroundSelectionDialog(
-    currentBackgroundColor: Color,
+fun EraserSelectionDialog(
+    pathOption: PathProperties,
     onDismiss: () -> Unit,
-    onNegativeClick: () -> Unit,
-    onPositiveClick: (Color, Int) -> Unit,
 ) {
 
-    var myColor = currentBackgroundColor
-    val bgColor1 = colorResource(R.color.dark_white)
-    val bgColor2 = colorResource(R.color.light_brown)
-    val bgColor3 = colorResource(R.color.light_green)
-    val bgColor4 = colorResource(R.color.light_blue)
-    val bgColor5 = colorResource(R.color.light_black)
-    val bgColor6 = colorResource(R.color.dark_green)
-    val bgColor7 = colorResource(R.color.dark_blue)
-    val bgColor8 = colorResource(R.color.dark_purple)
+    var strokeWidth by remember { mutableStateOf(pathOption.strokeWidth) }
 
-    var bgType = 0
-
-    Dialog(onDismissRequest = onDismiss) {
-
-        BoxWithConstraints(
-            Modifier
-                .shadow(1.dp, RoundedCornerShape(8.dp))
-                .background(Color.White)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onDismiss() } // Dismiss dialog on background click
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(y = (-80).dp, x = (-160).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom
         ) {
-
-            val widthInDp = LocalDensity.current.run { maxWidth }
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-                Text(
-                    text = "BG Color",
-                    color = Blue400,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 12.dp)
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .width(200.dp)
+                    .background(Color.White)
+            ) {
+                Slider(
+                    value = strokeWidth,
+                    onValueChange = {
+                        strokeWidth = it
+                        pathOption.strokeWidth = strokeWidth
+                    },
+                    valueRange = 1f..100f,
+                    onValueChangeFinished = {},
+                    colors = SliderDefaults.colors(
+                        thumbColor = Orange_Main, // Change thumb color
+                        activeTrackColor = Orange_Main, // Change active track color
+                        inactiveTrackColor = Color.Gray // Change inactive track color
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-                                .background(
-                                    colorResource(R.color.dark_white),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    myColor = bgColor1
-                                }
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-                                .background(
-                                    colorResource(R.color.light_brown),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    myColor = bgColor2
-                                }
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-                                .background(
-                                    colorResource(R.color.light_green),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    myColor = bgColor3
-                                }
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-                                .background(
-                                    colorResource(R.color.light_blue),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    myColor = bgColor4
-                                }
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-//                                .padding(horizontal = 4.dp)
-                                .background(
-                                    colorResource(R.color.light_black),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    myColor = bgColor5
-                                }
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-                                .background(
-                                    colorResource(R.color.dark_green),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    myColor = bgColor6
-                                }
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-                                .background(
-                                    colorResource(R.color.dark_blue),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    myColor = bgColor7
-                                }
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(40.dp)
-                                .background(
-                                    colorResource(R.color.dark_purple),
-                                    shape = RoundedCornerShape(50.dp)
-                                )
-                                .clickable {
-                                    myColor = bgColor8
-                                }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-
-                // Choose Background Type
-                var firstTint by remember { mutableStateOf(Color.LightGray) }
-                var secondTint by remember { mutableStateOf(Color.LightGray) }
-                var thirdTint by remember { mutableStateOf(Color.LightGray) }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-
-                    IconButton(
-                        onClick = {
-                            bgType = 0
-                            firstTint = Color.Black
-                            secondTint = Color.LightGray
-                            thirdTint = Color.LightGray
-                        },
-                        modifier = Modifier.size(30.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.figure_square_24),
-                            contentDescription = null,
-                            tint = firstTint
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
-                            bgType = 1
-                            firstTint = Color.LightGray
-                            secondTint = Color.Black
-                            thirdTint = Color.LightGray
-                        },
-                        modifier = Modifier.size(30.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_table_rows_24),
-                            contentDescription = null,
-                            tint = secondTint
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
-                            bgType = 2
-                            firstTint = Color.LightGray
-                            secondTint = Color.LightGray
-                            thirdTint = Color.Black
-                        },
-                        modifier = Modifier.size(30.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_view_module_24),
-                            contentDescription = null,
-                            tint = thirdTint
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Buttons
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .background(Color(0xffF3E5F5)),
-                    verticalAlignment = Alignment.CenterVertically
-
-                ) {
-
-                    TextButton(
-                        onClick = onNegativeClick,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                    ) {
-                        Text(text = "CANCEL")
-                    }
-                    TextButton(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        onClick = {
-                            onPositiveClick(myColor, bgType)
-                        },
-                    ) {
-                        Text(text = "OK")
-                    }
-                }
             }
+            Canvas(
+                modifier = Modifier.size(width = 40.dp, height = 15.dp)
+            ) {
+                val path = Path()
+
+                path.moveTo(0f, 0f)
+                path.lineTo(20f, 15f)
+                path.lineTo(40f, 0f)
+
+                drawPath(
+                    path = path,
+                    color = Color.White,
+                )
+            }
+
         }
     }
 }
@@ -1381,22 +1126,28 @@ fun FigureDialog(
     onDismiss: () -> Unit,
     onDrawModeChanged: (DrawMode) -> Unit
 ) {
-    Dialog(onDismissRequest = { onDismiss() }) {
 
-        Card(
-            //elevation = 2.dp,
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.padding(vertical = 8.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onDismiss() } // Dismiss dialog on background click
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(y = (-80).dp, x = (-45).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom
         ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-
-                Text(
-                    text = "Figures",
-                    color = Blue400,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 12.dp, top = 12.dp)
-                )
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .width(340.dp)
+                    .height(120.dp)
+                    .background(Color.White)
+            ) {
 
                 Spacer(Modifier.height(10.dp))
 
@@ -1483,7 +1234,7 @@ fun FigureDialog(
                     }
                 }
 
-                Row{
+                Row {
 
                     IconButton(onClick = {
                         onDismiss()
@@ -1563,6 +1314,22 @@ fun FigureDialog(
                     }
 
                 }
+            }
+            Canvas(
+                modifier = Modifier
+                    .size(width = 40.dp, height = 15.dp)
+                    .offset(x = (10).dp)
+            ) {
+                val path = Path()
+
+                path.moveTo(0f, 0f)
+                path.lineTo(20f, 15f)
+                path.lineTo(40f, 0f)
+
+                drawPath(
+                    path = path,
+                    color = Color.White,
+                )
             }
         }
     }
@@ -1877,10 +1644,10 @@ fun TimerDialog(
         }
 
     Box(
-        modifier = if(expandMode) expandModeModifier
+        modifier = if (expandMode) expandModeModifier
         else commonModeModifier
 
-        ) {
+    ) {
         var hours by remember { mutableStateOf(0) }
         var minutes by remember { mutableStateOf(0) }
         var seconds by remember { mutableStateOf(0) }
@@ -2030,29 +1797,30 @@ fun TimerDialog(
                                 val totalMilliseconds =
                                     (hours * 3600 + minutes * 60 + seconds) * 1000L
 
-                                countdownTimer = object : CountDownTimer(totalMilliseconds, 1000) {
-                                    override fun onTick(millisUntilFinished: Long) {
-                                        hours = (millisUntilFinished / 3600000).toInt()
-                                        minutes =
-                                            ((millisUntilFinished % 3600000) / 60000).toInt()
-                                        seconds =
-                                            ((millisUntilFinished % 60000) / 1000).toInt()
+                                countdownTimer =
+                                    object : CountDownTimer(totalMilliseconds, 1000) {
+                                        override fun onTick(millisUntilFinished: Long) {
+                                            hours = (millisUntilFinished / 3600000).toInt()
+                                            minutes =
+                                                ((millisUntilFinished % 3600000) / 60000).toInt()
+                                            seconds =
+                                                ((millisUntilFinished % 60000) / 1000).toInt()
 
-                                        val formattedTime = String.format(
-                                            "%02d:%02d:%02d",
-                                            hours,
-                                            minutes,
-                                            seconds
-                                        )
+                                            val formattedTime = String.format(
+                                                "%02d:%02d:%02d",
+                                                hours,
+                                                minutes,
+                                                seconds
+                                            )
 
-                                        countdownText = formattedTime
-                                    }
+                                            countdownText = formattedTime
+                                        }
 
-                                    override fun onFinish() {
-                                        countdownText = "00:00:00"
-                                        counting = false
-                                    }
-                                }.start()
+                                        override fun onFinish() {
+                                            countdownText = "00:00:00"
+                                            counting = false
+                                        }
+                                    }.start()
                             }
                         } else {
                             // Pause or resume countdown timer
@@ -2072,29 +1840,30 @@ fun TimerDialog(
                                 if (isCountUp) {
                                     var elapsedSeconds = time / 1000
 
-                                    countUpTimer = object : CountDownTimer(Long.MAX_VALUE, 1000) {
-                                        override fun onTick(millisUntilFinished: Long) {
-                                            hours = (elapsedSeconds / 3600).toInt()
-                                            minutes = ((elapsedSeconds % 3600) / 60).toInt()
-                                            seconds = (elapsedSeconds % 60).toInt()
+                                    countUpTimer =
+                                        object : CountDownTimer(Long.MAX_VALUE, 1000) {
+                                            override fun onTick(millisUntilFinished: Long) {
+                                                hours = (elapsedSeconds / 3600).toInt()
+                                                minutes = ((elapsedSeconds % 3600) / 60).toInt()
+                                                seconds = (elapsedSeconds % 60).toInt()
 
-                                            val formattedTime = String.format(
-                                                "%02d:%02d:%02d",
-                                                hours,
-                                                minutes,
-                                                seconds
-                                            )
+                                                val formattedTime = String.format(
+                                                    "%02d:%02d:%02d",
+                                                    hours,
+                                                    minutes,
+                                                    seconds
+                                                )
 
-                                            countdownText = formattedTime
-                                            elapsedSeconds++
-                                        }
+                                                countdownText = formattedTime
+                                                elapsedSeconds++
+                                            }
 
-                                        override fun onFinish() {
-                                            // Not used in CountUp timer
-                                            //countdownText = "00:00:00"
-                                            counting = false
-                                        }
-                                    }.start()
+                                            override fun onFinish() {
+                                                // Not used in CountUp timer
+                                                //countdownText = "00:00:00"
+                                                counting = false
+                                            }
+                                        }.start()
                                 } else {
 
                                     countdownTimer = object : CountDownTimer(time, 1000) {
@@ -2227,6 +1996,258 @@ fun ScrollableTimer(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxSize()
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BackgroundSelectionDialog(
+    currentBackgroundColor: Color,
+    onDismiss: () -> Unit,
+    onNegativeClick: () -> Unit,
+    onPositiveClick: (Color, Int) -> Unit,
+) {
+
+    var myColor = currentBackgroundColor
+    val bgColor1 = colorResource(R.color.dark_white)
+    val bgColor2 = colorResource(R.color.light_brown)
+    val bgColor3 = colorResource(R.color.light_green)
+    val bgColor4 = colorResource(R.color.light_blue)
+    val bgColor5 = colorResource(R.color.light_black)
+    val bgColor6 = colorResource(R.color.dark_green)
+    val bgColor7 = colorResource(R.color.dark_blue)
+    val bgColor8 = colorResource(R.color.dark_purple)
+
+    var bgType = 0
+
+    Dialog(onDismissRequest = onDismiss) {
+
+        BoxWithConstraints(
+            Modifier
+                .shadow(1.dp, RoundedCornerShape(8.dp))
+                .background(Color.White)
+        ) {
+
+            val widthInDp = LocalDensity.current.run { maxWidth }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                Text(
+                    text = "BG Color",
+                    color = Blue400,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(40.dp)
+                                .background(
+                                    colorResource(R.color.dark_white),
+                                    shape = RoundedCornerShape(50.dp)
+                                )
+                                .clickable {
+                                    myColor = bgColor1
+                                }
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(40.dp)
+                                .background(
+                                    colorResource(R.color.light_brown),
+                                    shape = RoundedCornerShape(50.dp)
+                                )
+                                .clickable {
+                                    myColor = bgColor2
+                                }
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(40.dp)
+                                .background(
+                                    colorResource(R.color.light_green),
+                                    shape = RoundedCornerShape(50.dp)
+                                )
+                                .clickable {
+                                    myColor = bgColor3
+                                }
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(40.dp)
+                                .background(
+                                    colorResource(R.color.light_blue),
+                                    shape = RoundedCornerShape(50.dp)
+                                )
+                                .clickable {
+                                    myColor = bgColor4
+                                }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(40.dp)
+//                                .padding(horizontal = 4.dp)
+                                .background(
+                                    colorResource(R.color.light_black),
+                                    shape = RoundedCornerShape(50.dp)
+                                )
+                                .clickable {
+                                    myColor = bgColor5
+                                }
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(40.dp)
+                                .background(
+                                    colorResource(R.color.dark_green),
+                                    shape = RoundedCornerShape(50.dp)
+                                )
+                                .clickable {
+                                    myColor = bgColor6
+                                }
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(40.dp)
+                                .background(
+                                    colorResource(R.color.dark_blue),
+                                    shape = RoundedCornerShape(50.dp)
+                                )
+                                .clickable {
+                                    myColor = bgColor7
+                                }
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(40.dp)
+                                .background(
+                                    colorResource(R.color.dark_purple),
+                                    shape = RoundedCornerShape(50.dp)
+                                )
+                                .clickable {
+                                    myColor = bgColor8
+                                }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+
+                // Choose Background Type
+                var firstTint by remember { mutableStateOf(Color.LightGray) }
+                var secondTint by remember { mutableStateOf(Color.LightGray) }
+                var thirdTint by remember { mutableStateOf(Color.LightGray) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+
+                    IconButton(
+                        onClick = {
+                            bgType = 0
+                            firstTint = Color.Black
+                            secondTint = Color.LightGray
+                            thirdTint = Color.LightGray
+                        },
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.figure_square_24),
+                            contentDescription = null,
+                            tint = firstTint
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            bgType = 1
+                            firstTint = Color.LightGray
+                            secondTint = Color.Black
+                            thirdTint = Color.LightGray
+                        },
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_table_rows_24),
+                            contentDescription = null,
+                            tint = secondTint
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            bgType = 2
+                            firstTint = Color.LightGray
+                            secondTint = Color.LightGray
+                            thirdTint = Color.Black
+                        },
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_view_module_24),
+                            contentDescription = null,
+                            tint = thirdTint
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Buttons
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .background(Color(0xffF3E5F5)),
+                    verticalAlignment = Alignment.CenterVertically
+
+                ) {
+
+                    TextButton(
+                        onClick = onNegativeClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        Text(text = "CANCEL")
+                    }
+                    TextButton(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        onClick = {
+                            onPositiveClick(myColor, bgType)
+                        },
+                    ) {
+                        Text(text = "OK")
+                    }
                 }
             }
         }

@@ -2078,6 +2078,7 @@ fun DrawingApp() {
                 myTable.columnAmount = 0
                 //clear figures
                 figures = emptyList()
+                selectionRect = emptyList()
 
             },
             onPathPropertiesChange = {
