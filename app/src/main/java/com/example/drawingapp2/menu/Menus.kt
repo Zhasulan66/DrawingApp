@@ -80,6 +80,7 @@ fun DrawingPropertiesMenu(
     pathProperties: PathProperties,
     drawMode: DrawMode,
     currentBackgroundColor: Color,
+    currentBgType: Int,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onClearAll: () -> Unit,
@@ -87,11 +88,16 @@ fun DrawingPropertiesMenu(
     onDrawModeChanged: (DrawMode) -> Unit,
     onBgChanged: (Color, Int) -> Unit,
     onDrawTable: (Int, Int) -> Unit,
-    myLauncher: ManagedActivityResultLauncher<String, Uri?>
+    onLauncherClicked: () -> Unit,
+    currentPage: Int,
+    pageSize: Int,
+    onPageAdded: () -> Unit,
+    onCurrentPageChanged: (Boolean) -> Unit
 ) {
 
     val properties by rememberUpdatedState(newValue = pathProperties)
     var bgColor by remember { mutableStateOf(currentBackgroundColor) }
+    var myBgType by remember { mutableStateOf(currentBgType) }
 
     var showEraserDialog by remember { mutableStateOf(false) }
     var showPropertiesDialog by remember { mutableStateOf(false) }
@@ -528,7 +534,7 @@ fun DrawingPropertiesMenu(
             ) {
                 IconButton(
                     onClick = {
-                        /*TODO*/
+                        onPageAdded()
                     }
                 ) {
                     Column(
@@ -555,7 +561,7 @@ fun DrawingPropertiesMenu(
             ) {
                 IconButton(
                     onClick = {
-                        /*TODO*/
+                        onCurrentPageChanged(false)
                     }
                 ) {
                     Column(
@@ -575,21 +581,20 @@ fun DrawingPropertiesMenu(
                     }
                 }
             }
+            //page text
             Box(
                 modifier = Modifier
                     .background(Color.White)
                     .padding(horizontal = 10.dp)
             ) {
                 IconButton(
-                    onClick = {
-                        /*TODO*/
-                    }
+                    onClick = {}
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "1/2",
+                            text = "$currentPage/$pageSize",
                             fontSize = 12.sp,
                             color = Color.Black,
                             modifier = Modifier.padding(vertical = 3.dp)
@@ -602,6 +607,7 @@ fun DrawingPropertiesMenu(
                         )
                     }
                 }
+
             }
             Box(
                 modifier = Modifier
@@ -611,7 +617,7 @@ fun DrawingPropertiesMenu(
             ) {
                 IconButton(
                     onClick = {
-                        /*TODO*/
+                        onCurrentPageChanged(true)
                     }
                 ) {
                     Column(
@@ -666,11 +672,13 @@ fun DrawingPropertiesMenu(
         if (showBackgroundDialog) {
             BackgroundSelectionDialog(
                 bgColor,
+                myBgType,
                 onDismiss = { showBackgroundDialog = !showBackgroundDialog },
                 onNegativeClick = { showBackgroundDialog = !showBackgroundDialog },
                 onPositiveClick = { color: Color, bgType: Int ->
                     showBackgroundDialog = !showBackgroundDialog
                     bgColor = color
+                    myBgType = bgType
                     onBgChanged(bgColor, bgType)
                 }
             )
@@ -703,7 +711,7 @@ fun DrawingPropertiesMenu(
                 openTimerDialog = {
                     showTimerDialog = !showTimerDialog
                 },
-                launcher = myLauncher
+                onLauncherClicked = onLauncherClicked
             )
         }
 
@@ -1180,9 +1188,9 @@ fun FigureDialog(
 
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_line_24),
+                            painter = painterResource(R.drawable.figure_line),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1192,9 +1200,9 @@ fun FigureDialog(
 
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_dash_line_24),
+                            painter = painterResource(R.drawable.figure_dash_line),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1204,9 +1212,9 @@ fun FigureDialog(
 
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_arrow_line_24),
+                            painter = painterResource(R.drawable.figure_arrow_line),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1216,9 +1224,9 @@ fun FigureDialog(
 
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_dash_arrow_line_24),
+                            painter = painterResource(R.drawable.figure_dash_arrow_line),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1227,9 +1235,9 @@ fun FigureDialog(
                         onDrawModeChanged(DrawMode.TriangleDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_triangle_24),
+                            painter = painterResource(R.drawable.figure_triangle),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1240,7 +1248,7 @@ fun FigureDialog(
                         Icon(
                             painter = painterResource(R.drawable.figure_parallelogram_24),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1251,7 +1259,7 @@ fun FigureDialog(
                         Icon(
                             painter = painterResource(R.drawable.figure_trapezoid_24),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
                 }
@@ -1263,9 +1271,9 @@ fun FigureDialog(
                         onDrawModeChanged(DrawMode.RectDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_square_24),
+                            painter = painterResource(R.drawable.figure_square),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1274,9 +1282,9 @@ fun FigureDialog(
                         onDrawModeChanged(DrawMode.RoundRectDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_round_rect_24),
+                            painter = painterResource(R.drawable.figure_round_rect),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1285,9 +1293,9 @@ fun FigureDialog(
                         onDrawModeChanged(DrawMode.CircleDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_circle_24),
+                            painter = painterResource(R.drawable.figure_circle),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1296,9 +1304,9 @@ fun FigureDialog(
                         onDrawModeChanged(DrawMode.HalfCircleDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_half_circle_24),
+                            painter = painterResource(R.drawable.figure_half_circle),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1307,9 +1315,9 @@ fun FigureDialog(
                         onDrawModeChanged(DrawMode.OctagonDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_hexagon_24),
+                            painter = painterResource(R.drawable.figure_octagon),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1320,7 +1328,7 @@ fun FigureDialog(
                         Icon(
                             painter = painterResource(R.drawable.figure_cylinder_24),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1329,9 +1337,9 @@ fun FigureDialog(
                         onDrawModeChanged(DrawMode.StarDraw)
                     }) {
                         Icon(
-                            painter = painterResource(R.drawable.figure_star_24),
+                            painter = painterResource(R.drawable.figure_star),
                             contentDescription = null,
-                            tint = Color.LightGray
+                            tint = Color.Black
                         )
                     }
 
@@ -1363,7 +1371,7 @@ fun FeatureDialog(
     openTableDialog: () -> Unit,
     openWebDialog: () -> Unit,
     openTimerDialog: () -> Unit,
-    launcher: ManagedActivityResultLauncher<String, Uri?>
+    onLauncherClicked: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -1428,7 +1436,7 @@ fun FeatureDialog(
                     //Image Dialog
                     IconButton(onClick = {
                         onDismiss()
-                        launcher.launch("image/*")
+                        onLauncherClicked()
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.choose_icon_image),
@@ -2066,6 +2074,7 @@ fun ScrollableTimer(
 @Composable
 fun BackgroundSelectionDialog(
     currentBackgroundColor: Color,
+    currentBgType: Int,
     onDismiss: () -> Unit,
     onNegativeClick: () -> Unit,
     onPositiveClick: (Color, Int) -> Unit,
@@ -2073,7 +2082,7 @@ fun BackgroundSelectionDialog(
 
     var myColor = currentBackgroundColor
 
-    var bgType = 0
+    var bgType =  currentBgType
 
     Box(
         modifier = Modifier

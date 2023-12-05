@@ -93,21 +93,6 @@ fun DrawingApp() {
     val context = LocalContext.current
 
     /**
-     * Paths that are added, this is required to have paths with different options and paths
-     *  ith erase to keep over each other
-     */
-    var paths = remember { mutableStateListOf<Pair<Path, PathProperties>>() }
-
-    /**
-     * Paths that are undone via button. These paths are restored if user pushes
-     * redo button if there is no new path drawn.
-     *
-     * If new path is drawn after this list is cleared to not break paths after undoing previous
-     * ones.
-     */
-    var pathsUndone = remember { mutableStateListOf<Pair<Path, PathProperties>>() }
-
-    /**
      * Canvas touch state. [MotionEvent.Idle] by default, [MotionEvent.Down] at first contact,
      * [MotionEvent.Move] while dragging and [MotionEvent.Up] when first pointer is up
      */
@@ -156,8 +141,19 @@ fun DrawingApp() {
     var temporaryCylinder by remember { mutableStateOf<Cylinder?>(null) }
     var temporaryStar by remember { mutableStateOf<Star?>(null) }
 
-    //list for all figures
-    var figures by remember { mutableStateOf(emptyList<Figure>()) }
+    //list for all pages
+    var myPages by remember { mutableStateOf(emptyList<Page>()) }
+    var currentPage by remember { mutableStateOf(0) }
+
+
+    //for image
+    /*var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val bitmap = remember { mutableStateOf<Bitmap?>(null) }*/
+    val launcher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
+            myPages[currentPage].imageUri = uri
+        }
+
 
     //selection rect
     var selectionRectangle by mutableStateOf<Rectangle?>(null)
@@ -169,20 +165,6 @@ fun DrawingApp() {
 
     //field background color
     var currentBackgroundColor by remember { mutableStateOf(Green800) }
-    var bgType by remember { mutableStateOf(0) }
-    val myTable by remember { mutableStateOf(Table()) }
-
-    //for image
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-    val bitmap = remember { mutableStateOf<Bitmap?>(null) }
-    val launcher =
-        rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
-            imageUri = uri
-        }
-
-    // Calculate offsets for centering the table
-    var centerX by remember { mutableStateOf(0f) }
-    var centerY by remember { mutableStateOf(0f) }
 
     val canvasText = remember { StringBuilder() }
     val paint = remember {
@@ -197,6 +179,19 @@ fun DrawingApp() {
 
     var initialTouchPoint by mutableStateOf(Offset.Zero)
 
+    if(myPages.isEmpty()) {
+        myPages = myPages + Page(
+            paths = mutableStateListOf(Pair(Path(), PathProperties())),
+            pathsUndone = mutableStateListOf(Pair(Path(), PathProperties())),
+            figures = emptyList(),
+            myTable = Table(),
+            bgType = 0,
+            pageBackground = Green800,
+            imageUri = null,
+            bitmap = null,
+            launcher = launcher
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -210,6 +205,7 @@ fun DrawingApp() {
 
         val distanceBetweenLines = 30.dp
 
+
         //canvas for bg lines
         Canvas(
             modifier = Modifier
@@ -221,8 +217,8 @@ fun DrawingApp() {
                 (screenSize.height / distanceBetweenLines.toPx()).toInt()
             val numberOfVerticalLines = (screenSize.width / distanceBetweenLines.toPx()).toInt()
 
-
-            when (bgType) {
+            currentBackgroundColor = myPages[currentPage].pageBackground
+            when (myPages[currentPage].bgType) {
                 1 -> {
                     bg_lines = emptyList()
                     // Draw horizontal lines
@@ -277,7 +273,7 @@ fun DrawingApp() {
                     motionEvent = MotionEvent.Down
                     currentPosition = pointerInputChange.position
                     pointerInputChange.consumeDownChange()
-                    if(drawMode == DrawMode.MoveSelection){
+                    if (drawMode == DrawMode.MoveSelection) {
                         val myRect = Rect(
                             Offset(
                                 selectionRect[0].leftTop.x,
@@ -285,7 +281,7 @@ fun DrawingApp() {
                             ),
                             Size(selectionRect[0].width, selectionRect[0].height)
                         )
-                        if(!myRect.contains(currentPosition)){
+                        if (!myRect.contains(currentPosition)) {
                             drawMode = DrawMode.Selection
                         }
                     }
@@ -297,7 +293,7 @@ fun DrawingApp() {
                     if (drawMode == DrawMode.Touch) {
                         val change = pointerInputChange.positionChange()
                         println("DRAG: $change")
-                        paths.forEach { entry ->
+                        myPages[currentPage].paths.forEach { entry ->
                             val path: Path = entry.first
                             path.translate(change)
                         }
@@ -314,80 +310,80 @@ fun DrawingApp() {
                                 // Do nothing, just trigger recomposition
                             }
                         }
-                        centerX += change.x
-                        centerY += change.y
+                        myPages[currentPage].centerX += change.x
+                        myPages[currentPage].centerY += change.y
 
                         currentPath.translate(change)
 
                     }
-                    if(drawMode == DrawMode.MoveSelection){
+                    if (drawMode == DrawMode.MoveSelection) {
                         val change = pointerInputChange.positionChange()
                         selectionRect[0].leftTop.x += change.x
                         selectionRect[0].leftTop.y += change.y
-                        figures.forEach { figure ->
-                           if(figure.isSelected){
-                               when (figure) {
-                                   is Line -> {
-                                       figure.start.x += change.x
-                                       figure.start.y += change.y
-                                       figure.end.x += change.x
-                                       figure.end.y += change.y
-                                   }
+                        myPages[currentPage].figures.forEach { figure ->
+                            if (figure.isSelected) {
+                                when (figure) {
+                                    is Line -> {
+                                        figure.start.x += change.x
+                                        figure.start.y += change.y
+                                        figure.end.x += change.x
+                                        figure.end.y += change.y
+                                    }
 
-                                   is Triangle -> {
-                                       figure.point1 += change
-                                       figure.point2 += change
-                                       figure.point3 += change
-                                   }
+                                    is Triangle -> {
+                                        figure.point1 += change
+                                        figure.point2 += change
+                                        figure.point3 += change
+                                    }
 
-                                   is Parallelogram -> {
-                                       figure.points[0] += change
-                                       figure.points[1] += change
-                                       figure.points[2] += change
-                                       figure.points[3] += change
-                                   }
+                                    is Parallelogram -> {
+                                        figure.points[0] += change
+                                        figure.points[1] += change
+                                        figure.points[2] += change
+                                        figure.points[3] += change
+                                    }
 
-                                   is Trapezoid -> {
-                                       figure.points[0] += change
-                                       figure.points[1] += change
-                                       figure.points[2] += change
-                                       figure.points[3] += change
-                                   }
+                                    is Trapezoid -> {
+                                        figure.points[0] += change
+                                        figure.points[1] += change
+                                        figure.points[2] += change
+                                        figure.points[3] += change
+                                    }
 
-                                   is Rectangle -> {
-                                       figure.leftTop.x += change.x
-                                       figure.leftTop.y += change.x
-                                   }
+                                    is Rectangle -> {
+                                        figure.leftTop.x += change.x
+                                        figure.leftTop.y += change.x
+                                    }
 
-                                   is RoundRectangle -> {
-                                       figure.leftTop.x += change.x
-                                       figure.leftTop.y += change.y
-                                   }
+                                    is RoundRectangle -> {
+                                        figure.leftTop.x += change.x
+                                        figure.leftTop.y += change.y
+                                    }
 
-                                   is Circle -> {
-                                       figure.center.x += change.x
-                                       figure.center.y += change.y
-                                   }
+                                    is Circle -> {
+                                        figure.center.x += change.x
+                                        figure.center.y += change.y
+                                    }
 
-                                   is HalfCircle -> {
-                                       figure.centerX += change.x
-                                       figure.centerY += change.y
-                                   }
+                                    is HalfCircle -> {
+                                        figure.centerX += change.x
+                                        figure.centerY += change.y
+                                    }
 
-                                   is Octagon -> {
-                                       figure.center += change
-                                   }
+                                    is Octagon -> {
+                                        figure.center += change
+                                    }
 
-                                   is Cylinder -> {
-                                       figure.center += change
-                                   }
+                                    is Cylinder -> {
+                                        figure.center += change
+                                    }
 
-                                   is Star -> {
-                                       figure.center += change
-                                   }
-                               }
+                                    is Star -> {
+                                        figure.center += change
+                                    }
+                                }
 
-                           }
+                            }
                         }
                     }
                     pointerInputChange.consumePositionChange()
@@ -397,20 +393,19 @@ fun DrawingApp() {
                     motionEvent = MotionEvent.Up
                     pointerInputChange.consumeDownChange()
                 },
-
-                )
+            )
             .transformable(
                 state = rememberTransformableState { zoomChange, panChange, rotationChange ->
                     scale = 1f
                     if (drawMode == DrawMode.Touch) {
                         val scaleFactor = 1.0f + (zoomChange - 1.0f) * 0.2f
                         scale *= scaleFactor
-                        myTable.tableZoom *= scaleFactor
+                        myPages[currentPage].myTable.tableZoom *= scaleFactor
                         //myRotation += rotationChange * scaleFactor
 
                         Log.d("zoom", "zoom: $scale")
 
-                        paths.forEachIndexed { index, entry ->
+                        myPages[currentPage].paths.forEachIndexed { index, entry ->
                             val originalPath = entry.first
                             val pathProperties = entry.second
 
@@ -437,13 +432,16 @@ fun DrawingApp() {
                             }
                         }
 
-                        if (myTable.tableZoom > 1) {
-                            myTable.tableScale = 100f + myTable.tableZoom * 10
-                            myTable.strokeWidth = 4.dp + (myTable.tableZoom).toInt().dp
+                        if (myPages[currentPage].myTable.tableZoom > 1) {
+                            myPages[currentPage].myTable.tableScale =
+                                100f + myPages[currentPage].myTable.tableZoom * 10
+                            myPages[currentPage].myTable.strokeWidth =
+                                4.dp + (myPages[currentPage].myTable.tableZoom).toInt().dp
                             //tableLines[tableLines.size - 2]
                             //tableStrokeWidth += (scale).dp
                         } else {
-                            myTable.tableScale = 100f - myTable.tableZoom * 10
+                            myPages[currentPage].myTable.tableScale =
+                                100f - myPages[currentPage].myTable.tableZoom * 10
                             //myTable.strokeWidth = 4.dp - (scale).toInt().dp
                         }
                     }
@@ -598,7 +596,7 @@ fun DrawingApp() {
                         showSelectionIcons = false
                         isFigureSelected = false
                         selectionRect = emptyList()
-                        figures.forEach {
+                        myPages[currentPage].figures.forEach {
                             it.isSelected = false
                         }
 
@@ -775,7 +773,7 @@ fun DrawingApp() {
 
                         // Pointer is up save current path
 //                        paths[currentPath] = currentPathProperty
-                        paths.add(Pair(currentPath, currentPathProperty))
+                        myPages[currentPage].paths.add(Pair(currentPath, currentPathProperty))
 
                         // Since paths are keys for map, use new one for each key
                         // and have separate path for each down-move-up gesture cycle
@@ -796,7 +794,7 @@ fun DrawingApp() {
                     if (drawMode == DrawMode.LineDraw) {
                         // Touch released, add the line to the list
                         temporaryLine?.let { line ->
-                            figures = figures + line
+                            myPages[currentPage].figures = myPages[currentPage].figures + line
                         }
 
                     }
@@ -805,7 +803,7 @@ fun DrawingApp() {
 
                         // Drawing dashed lines
                         temporaryDashedLine?.let { dashedLine ->
-                            figures = figures + dashedLine
+                            myPages[currentPage].figures = myPages[currentPage].figures + dashedLine
                         }
 
                     }
@@ -814,7 +812,7 @@ fun DrawingApp() {
 
                         // Drawing arrow lines
                         temporaryArrowLine?.let { arrowLine ->
-                            figures = figures + arrowLine
+                            myPages[currentPage].figures = myPages[currentPage].figures + arrowLine
                         }
 
                     }
@@ -823,71 +821,71 @@ fun DrawingApp() {
 
                         // Drawing arrow lines
                         temporaryDashedArrowLine?.let { dashedArrowLine ->
-                            figures = figures + dashedArrowLine
+                            myPages[currentPage].figures = myPages[currentPage].figures + dashedArrowLine
                         }
 
                     }
 
                     if (drawMode == DrawMode.TriangleDraw) {
                         temporaryTriangle?.let { triangle ->
-                            figures = figures + triangle
+                            myPages[currentPage].figures = myPages[currentPage].figures + triangle
                         }
                     }
 
                     if (drawMode == DrawMode.ParallelogramDraw) {
                         temporaryParallelogram?.let { parallelogram ->
-                            figures = figures + parallelogram
+                            myPages[currentPage].figures = myPages[currentPage].figures + parallelogram
                         }
                     }
 
                     if (drawMode == DrawMode.TrapezoidDraw) {
                         temporaryTrapezoid?.let { trapezoid ->
-                            figures = figures + trapezoid
+                            myPages[currentPage].figures = myPages[currentPage].figures + trapezoid
                         }
                     }
 
                     if (drawMode == DrawMode.RectDraw) {
                         // Touch released, add the final version of the rectangle to the list
                         temporaryRectangle?.let { rectangle ->
-                            figures = figures + rectangle
+                            myPages[currentPage].figures = myPages[currentPage].figures + rectangle
                         }
                     }
 
                     if (drawMode == DrawMode.RoundRectDraw) {
                         // Touch released, add the final version of the rectangle to the list
                         temporaryRoundRectangle?.let { rectangle ->
-                            figures = figures + rectangle
+                            myPages[currentPage].figures = myPages[currentPage].figures + rectangle
                         }
                     }
 
                     if (drawMode == DrawMode.CircleDraw) {
                         // Touch released, add the final version of the circle to the list
                         temporaryCircle?.let { circle ->
-                            figures = figures + circle
+                            myPages[currentPage].figures = myPages[currentPage].figures + circle
                         }
                     }
 
                     if (drawMode == DrawMode.HalfCircleDraw) {
                         temporaryHalfCircle?.let { halfCircle ->
-                            figures = figures + halfCircle
+                            myPages[currentPage].figures = myPages[currentPage].figures + halfCircle
                         }
                     }
 
                     if (drawMode == DrawMode.OctagonDraw) {
                         temporaryOctagon?.let { octagon ->
-                            figures = figures + octagon
+                            myPages[currentPage].figures = myPages[currentPage].figures + octagon
                         }
                     }
 
                     if (drawMode == DrawMode.CylinderDraw) {
                         temporaryCylinder?.let { cylinder ->
-                            figures = figures + cylinder
+                            myPages[currentPage].figures = myPages[currentPage].figures + cylinder
                         }
                     }
 
                     if (drawMode == DrawMode.StarDraw) {
                         temporaryStar?.let { star ->
-                            figures = figures + star
+                            myPages[currentPage].figures = myPages[currentPage].figures + star
                         }
                     }
 
@@ -918,7 +916,7 @@ fun DrawingApp() {
                         selectionPath = Path()
 
                         //figure selection
-                        figures.forEach { figure ->
+                        myPages[currentPage].figures.forEach { figure ->
                             when (figure) {
                                 is Line -> {
                                     when (figure.type) {
@@ -1142,7 +1140,7 @@ fun DrawingApp() {
                     temporaryStar = null
 
                     // Since new path is drawn no need to store paths to undone
-                    pathsUndone.clear()
+                    myPages[currentPage].pathsUndone.clear()
 
                     // If we leave this state at MotionEvent.Up it causes current path to draw
                     // line from (0,0) if this composable recomposes when draw mode is changed
@@ -1155,48 +1153,54 @@ fun DrawingApp() {
             }
 
             //table filling
-            for (i in 0 until myTable.rowAmount + 1) {
-                val y = i * myTable.tableScale + centerY
-                tableLines = tableLines + Pair(centerX, y)
+            for (i in 0 until myPages[currentPage].myTable.rowAmount + 1) {
+                val y = i * myPages[currentPage].myTable.tableScale + myPages[currentPage].centerY
+                tableLines = tableLines + Pair(myPages[currentPage].centerX, y)
             }
-            for (i in 0 until myTable.columnAmount + 1) {
-                val x = i * myTable.tableScale + centerX
-                tableLines = tableLines + Pair(x - 0.1f, centerY)
+            for (i in 0 until myPages[currentPage].myTable.columnAmount + 1) {
+                val x = i * myPages[currentPage].myTable.tableScale + myPages[currentPage].centerX
+                tableLines = tableLines + Pair(x - 0.1f, myPages[currentPage].centerY)
             }
 
 
             with(drawContext.canvas.nativeCanvas) {
 
                 //image drawing
-                imageUri?.let {
-                    if (Build.VERSION.SDK_INT < 28) {  //28
-                        bitmap.value = MediaStore.Images
-                            .Media.getBitmap(context.contentResolver, it)
-                    } else {
-                        val source = ImageDecoder.createSource(context.contentResolver, it)
-                        bitmap.value = ImageDecoder.decodeBitmap(source)
-                    }
+                myPages[currentPage].imageUri?.let {
 
-                    bitmap.value?.let { btm ->
-                        drawImage(
-                            image = btm.asImageBitmap(),
-                            dstOffset = IntOffset(x = centerX.toInt(), y = centerY.toInt()),
-                            dstSize = IntSize(btm.width, btm.height),
-                        )
-                    }
+                        if (Build.VERSION.SDK_INT < 28) {
+                            myPages[currentPage].bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+                        } else {
+                            val source = ImageDecoder.createSource(context.contentResolver, it)
+                            myPages[currentPage].bitmap = ImageDecoder.decodeBitmap(source)
+                        }
+
+                        myPages[currentPage].bitmap?.let { btm ->
+                            // Ensure the bitmap isn't null and can be drawn on the canvas
+                            drawImage(
+                                image = btm.asImageBitmap(),
+                                dstOffset = IntOffset(
+                                    x = myPages[currentPage].centerX.toInt(),
+                                    y = myPages[currentPage].centerY.toInt(),
+                                ),
+                                dstSize = IntSize(btm.width, btm.height),
+                            )
+
+                        }
                 }
 
+
                 //table drawing
-                if (myTable.rowAmount != 0 && myTable.columnAmount != 0) {
+                if (myPages[currentPage].myTable.rowAmount != 0 && myPages[currentPage].myTable.columnAmount != 0) {
                     tableLines.forEach { (x, y) ->
                         drawLine(
-                            color = myTable.color,
+                            color = myPages[currentPage].myTable.color,
                             start = Offset(x, y),
-                            end = if (x == centerX) Offset(
-                                centerX + myTable.columnAmount * myTable.tableScale, y
+                            end = if (x == myPages[currentPage].centerX) Offset(
+                                myPages[currentPage].centerX + myPages[currentPage].myTable.columnAmount * myPages[currentPage].myTable.tableScale, y
                             )
-                            else Offset(x, centerY + myTable.rowAmount * myTable.tableScale),
-                            strokeWidth = myTable.strokeWidth.toPx(),
+                            else Offset(x, myPages[currentPage].centerY + myPages[currentPage].myTable.rowAmount * myPages[currentPage].myTable.tableScale),
+                            strokeWidth = myPages[currentPage].myTable.strokeWidth.toPx(),
                             cap = StrokeCap.Square
                         )
                     }
@@ -1205,7 +1209,7 @@ fun DrawingApp() {
                 val checkPoint = saveLayer(null, null)
 
                 //draw figures
-                figures.forEach { figure ->
+                myPages[currentPage].figures.forEach { figure ->
                     when (figure) {
                         is Line -> {
                             when (figure.type) {
@@ -1932,7 +1936,7 @@ fun DrawingApp() {
 
                 }
 
-                paths.forEach {
+                myPages[currentPage].paths.forEach {
 
                     val path = it.first
                     val property = it.second
@@ -1998,23 +2002,23 @@ fun DrawingApp() {
             SelectionIcons(
                 rect = selectionRect[0],
                 deleteSelected = {
-                    figures.forEach { figure ->
+                    myPages[currentPage].figures.forEach { figure ->
                         if(figure.isSelected){
-                            figures = figures - figure
+                            myPages[currentPage].figures = myPages[currentPage].figures - figure
                         }
                     }
                     showSelectionIcons = false
                     selectionRect = emptyList()
                 },
                 colorClicked = { color ->
-                    figures.forEach { figure ->
+                    myPages[currentPage].figures.forEach { figure ->
                         if(figure.isSelected){
                             figure.color = color
                         }
                     }
                 },
                 fillSelected = {
-                    figures.forEach { figure ->
+                    myPages[currentPage].figures.forEach { figure ->
                         if(figure.isSelected){
                             figure.isFilled = !figure.isFilled
                         }
@@ -2036,49 +2040,52 @@ fun DrawingApp() {
         Clock(
             modifier = Modifier
                 .align(alignment = Alignment.TopEnd)
-                .padding(20.dp)
+                .padding(20.dp),
         )
 
         DrawingPropertiesMenu(
             modifier = Modifier
                 .offset(y = (-20).dp)
-                .background(currentBackgroundColor)
+                .background(myPages[currentPage].pageBackground)
                 .align(alignment = Alignment.BottomStart),
             pathProperties = currentPathProperty,
             drawMode = drawMode,
-            currentBackgroundColor = currentBackgroundColor,
+            currentBackgroundColor = myPages[currentPage].pageBackground,
+            currentBgType = myPages[currentPage].bgType,
             onUndo = {
-                if (paths.isNotEmpty()) {
+                if (myPages[currentPage].paths.isNotEmpty()) {
 
-                    val lastItem = paths.last()
+                    val lastItem = myPages[currentPage].paths.last()
                     val lastPath = lastItem.first
                     val lastPathProperty = lastItem.second
-                    paths.remove(lastItem)
+                    myPages[currentPage].paths.remove(lastItem)
 
-                    pathsUndone.add(Pair(lastPath, lastPathProperty))
+                    myPages[currentPage].pathsUndone.add(Pair(lastPath, lastPathProperty))
 
                 }
             },
             onRedo = {
-                if (pathsUndone.isNotEmpty()) {
+                if (myPages[currentPage].pathsUndone.isNotEmpty()) {
 
-                    val lastPath = pathsUndone.last().first
-                    val lastPathProperty = pathsUndone.last().second
-                    pathsUndone.removeLast()
-                    paths.add(Pair(lastPath, lastPathProperty))
+                    val lastPath = myPages[currentPage].pathsUndone.last().first
+                    val lastPathProperty = myPages[currentPage].pathsUndone.last().second
+                    myPages[currentPage].pathsUndone.removeLast()
+                    myPages[currentPage].paths.add(Pair(lastPath, lastPathProperty))
                 }
             },
             onClearAll = {
-                paths.clear()
-                pathsUndone.clear()
+                myPages[currentPage].paths.clear()
+                myPages[currentPage].pathsUndone.clear()
                 // delete all tableLines
                 tableLines = emptyList()
-                myTable.tableZoom = 1f
-                myTable.rowAmount = 0
-                myTable.columnAmount = 0
+                myPages[currentPage].myTable.tableZoom = 1f
+                myPages[currentPage].myTable.rowAmount = 0
+                myPages[currentPage].myTable.columnAmount = 0
                 //clear figures
-                figures = emptyList()
+                myPages[currentPage].figures = emptyList()
                 selectionRect = emptyList()
+                myPages[currentPage].imageUri = null
+                myPages[currentPage].bitmap = null
 
             },
             onPathPropertiesChange = {
@@ -2094,16 +2101,46 @@ fun DrawingApp() {
             ).show()*/
             },
             onBgChanged = { color, type ->
-                currentBackgroundColor = color
-                bgType = type
+                myPages[currentPage].pageBackground = color
+                myPages[currentPage].bgType = type
             },
             onDrawTable = { rowInt, columnInt ->
                 tableLines = emptyList()
-                myTable.tableZoom = 1f
-                myTable.rowAmount = rowInt
-                myTable.columnAmount = columnInt
+                myPages[currentPage].myTable.tableZoom = 1f
+                myPages[currentPage].myTable.rowAmount = rowInt
+                myPages[currentPage].myTable.columnAmount = columnInt
             },
-            myLauncher = launcher
+            onLauncherClicked = {
+                launcher.launch("image/*")
+            },
+            currentPage = currentPage+1,
+            pageSize = myPages.size,
+            onPageAdded = {
+                myPages = myPages + Page(
+                    paths = mutableStateListOf(Pair(Path(), PathProperties())),
+                    pathsUndone = mutableStateListOf(Pair(Path(), PathProperties())),
+                    figures = emptyList(),
+                    myTable = Table(),
+                    bgType = 0,
+                    pageBackground = Green800,
+                    imageUri = null,
+                    bitmap = null,
+                    launcher = launcher
+                )
+                currentPage = myPages.size - 1
+            },
+            onCurrentPageChanged = { isForward ->
+                if(isForward) {
+                    if(currentPage != myPages.size - 1){
+                        currentPage++
+                    }
+                } else {
+                    if(currentPage != 0){
+                        currentPage--
+                    }
+                }
+
+            }
 
         )
     }
@@ -2413,7 +2450,7 @@ fun SelectionIcons(
                 showColorCircles = !showColorCircles
             }) {
                 Icon(
-                    painter = painterResource(R.drawable.figure_circle_24),
+                    painter = painterResource(R.drawable.figure_circle),
                     contentDescription = null,
                     tint = Color.LightGray
                 )
