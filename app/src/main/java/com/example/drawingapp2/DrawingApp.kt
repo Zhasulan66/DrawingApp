@@ -2806,5 +2806,3 @@ private fun requestForegroundPermission(context: Context) {
         )
     }
 }
-
-

@@ -2,13 +2,14 @@ package com.example.drawingapp2.gesture
 
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
-import androidx.compose.foundation.gestures.calculateRotation
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.consumePositionChange
 import androidx.compose.ui.input.pointer.pointerInput
@@ -110,5 +111,56 @@ fun Modifier.dragMotionEvent(
         }
 
 
+    }
+)
+
+suspend fun AwaitPointerEventScope.awaitMultiTouchDrag(
+    onMultiTouchDragStart: (List<PointerInputChange>) -> Unit = {},
+    onMultiTouchDrag: (List<PointerInputChange>) -> Unit = {},
+    onMultiTouchDragEnd: (List<PointerInputChange>) -> Unit = {}
+) {
+    // Wait for at least one pointer to press down, and set the first contact position
+    val initialEvent: PointerEvent = awaitPointerEvent(PointerEventPass.Initial)
+    var activePointers: List<PointerInputChange> = listOf(initialEvent.changes.first())
+
+    onMultiTouchDragStart(activePointers)
+
+    while (true) {
+        val event: PointerEvent = awaitPointerEvent()
+
+        // Handle different types of pointer events
+        when (event.type) {
+            PointerEventType.Move -> {
+                // Update the list of active pointers
+                activePointers = event.changes.toList()
+                onMultiTouchDrag(activePointers)
+            }
+            PointerEventType.Release -> {
+                // Update the list of active pointers
+                activePointers = event.changes.toList()
+                onMultiTouchDragEnd(activePointers)
+                break
+            }
+            // Handle other pointer events if needed
+            // PointerEventType.Cancel, PointerEventType.Enter, PointerEventType.Leave, etc.
+        }
+    }
+}
+
+fun Modifier.multiTouchDragGesture(
+    onMultiTouchDragStart: (List<PointerInputChange>) -> Unit = {},
+    onMultiTouchDrag: (List<PointerInputChange>) -> Unit = {},
+    onMultiTouchDragEnd: (List<PointerInputChange>) -> Unit = {},
+) = this.then(
+    Modifier.pointerInput(Unit) {
+        forEachGesture {
+            awaitPointerEventScope {
+                awaitMultiTouchDrag(
+                    onMultiTouchDragStart = onMultiTouchDragStart,
+                    onMultiTouchDrag = onMultiTouchDrag,
+                    onMultiTouchDragEnd = onMultiTouchDragEnd
+                )
+            }
+        }
     }
 )
