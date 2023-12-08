@@ -1,11 +1,9 @@
 package com.example.drawingapp2.menu
 
-import android.net.Uri
 import android.os.CountDownTimer
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -16,7 +14,6 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,7 +30,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -51,14 +47,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -68,9 +60,48 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import com.example.drawingapp2.DrawMode
 import com.example.drawingapp2.R
+import com.example.drawingapp2.model.ImageFormat
 import com.example.drawingapp2.model.PathProperties
 import com.example.drawingapp2.model.TimeUnit
-import com.example.drawingapp2.ui.theme.*
+import com.example.drawingapp2.ui.theme.Blue400
+import com.example.drawingapp2.ui.theme.Green800
+import com.example.drawingapp2.ui.theme.Orange_Main
+import com.example.drawingapp2.ui.theme.PencilColor1
+import com.example.drawingapp2.ui.theme.PencilColor10
+import com.example.drawingapp2.ui.theme.PencilColor11
+import com.example.drawingapp2.ui.theme.PencilColor2
+import com.example.drawingapp2.ui.theme.PencilColor3
+import com.example.drawingapp2.ui.theme.PencilColor4
+import com.example.drawingapp2.ui.theme.PencilColor5
+import com.example.drawingapp2.ui.theme.PencilColor6
+import com.example.drawingapp2.ui.theme.PencilColor7
+import com.example.drawingapp2.ui.theme.PencilColor8
+import com.example.drawingapp2.ui.theme.PencilColor9
+import com.example.drawingapp2.ui.theme.Sea
+import com.example.drawingapp2.ui.theme.ThemeColor1
+import com.example.drawingapp2.ui.theme.ThemeColor10
+import com.example.drawingapp2.ui.theme.ThemeColor11
+import com.example.drawingapp2.ui.theme.ThemeColor12
+import com.example.drawingapp2.ui.theme.ThemeColor13
+import com.example.drawingapp2.ui.theme.ThemeColor14
+import com.example.drawingapp2.ui.theme.ThemeColor15
+import com.example.drawingapp2.ui.theme.ThemeColor16
+import com.example.drawingapp2.ui.theme.ThemeColor17
+import com.example.drawingapp2.ui.theme.ThemeColor18
+import com.example.drawingapp2.ui.theme.ThemeColor19
+import com.example.drawingapp2.ui.theme.ThemeColor2
+import com.example.drawingapp2.ui.theme.ThemeColor20
+import com.example.drawingapp2.ui.theme.ThemeColor21
+import com.example.drawingapp2.ui.theme.ThemeColor22
+import com.example.drawingapp2.ui.theme.ThemeColor23
+import com.example.drawingapp2.ui.theme.ThemeColor24
+import com.example.drawingapp2.ui.theme.ThemeColor3
+import com.example.drawingapp2.ui.theme.ThemeColor4
+import com.example.drawingapp2.ui.theme.ThemeColor5
+import com.example.drawingapp2.ui.theme.ThemeColor6
+import com.example.drawingapp2.ui.theme.ThemeColor7
+import com.example.drawingapp2.ui.theme.ThemeColor8
+import com.example.drawingapp2.ui.theme.ThemeColor9
 import com.godaddy.android.colorpicker.ClassicColorPicker
 import com.godaddy.android.colorpicker.HsvColor
 
@@ -92,7 +123,8 @@ fun DrawingPropertiesMenu(
     currentPage: Int,
     pageSize: Int,
     onPageAdded: () -> Unit,
-    onCurrentPageChanged: (Boolean) -> Unit
+    onCurrentPageChanged: (Boolean) -> Unit,
+    onSaveClicked: (ImageFormat) -> Unit
 ) {
 
     val properties by rememberUpdatedState(newValue = pathProperties)
@@ -108,6 +140,7 @@ fun DrawingPropertiesMenu(
     var showTableDialog by remember { mutableStateOf(false) }
     var showWebDialog by remember { mutableStateOf(false) }
     var showTimerDialog by remember { mutableStateOf(false) }
+    var showSaveDialog by remember { mutableStateOf(false) }
 
     var currentDrawMode = drawMode
 
@@ -119,6 +152,7 @@ fun DrawingPropertiesMenu(
             horizontalArrangement = Arrangement.Center
         ) {
             Spacer(Modifier.width(5.dp))
+            //menu
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(topStart = 5.dp, bottomStart = 5.dp))
@@ -147,6 +181,7 @@ fun DrawingPropertiesMenu(
                     }
                 }
             }
+            //exit
             Box(
                 modifier = Modifier
                     .background(Color.White)
@@ -174,6 +209,7 @@ fun DrawingPropertiesMenu(
                     }
                 }
             }
+            //QR save
             Box(
                 modifier = Modifier
                     .background(Color.White)
@@ -181,7 +217,8 @@ fun DrawingPropertiesMenu(
             ) {
                 IconButton(
                     onClick = {
-                        /*TODO*/
+                        showSaveDialog = !showSaveDialog
+                        //onSaveClicked()
                     }
                 ) {
                     Column(
@@ -201,6 +238,7 @@ fun DrawingPropertiesMenu(
                     }
                 }
             }
+            //list
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(topEnd = 5.dp, bottomEnd = 5.dp))
@@ -643,6 +681,14 @@ fun DrawingPropertiesMenu(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
+        if(showSaveDialog){
+            SaveSelectionDialog(
+                onSaveClicked = { format ->
+                    onSaveClicked(format)
+                },
+                onDismiss = { showSaveDialog = !showSaveDialog },
+            )
+        }
 
         if (showEraserDialog) {
             EraserSelectionDialog(
@@ -1088,6 +1134,144 @@ fun ColorPickerDialog(
     }
 
 
+}
+
+@Composable
+fun SaveSelectionDialog(
+    onSaveClicked: (ImageFormat) -> Unit,
+    onDismiss: () -> Unit,
+){
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onDismiss() } // Dismiss dialog on background click
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .offset(y = (-80).dp, x = (-460).dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom
+        ) {
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .width(200.dp)
+                    .background(Color.White)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Spacer(Modifier.width(5.dp))
+                    //jpg save
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(topStart = 5.dp, bottomStart = 5.dp))
+                            .background(Color.White)
+                            .padding(horizontal = 10.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                onSaveClicked(ImageFormat.JPEG)
+                                onDismiss()
+                            }
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.menu_icon_menu),
+                                    contentDescription = null,
+                                    tint = Color.Unspecified
+                                )
+                                Text(
+                                    text = "JPG",
+                                    fontSize = 10.sp,
+                                    color = Color.Black,
+                                    modifier = Modifier.alpha(0.7f)
+                                )
+                            }
+                        }
+                    }
+                    //png save
+                    Box(
+                        modifier = Modifier
+                            .background(Color.White)
+                            .padding(horizontal = 10.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                onSaveClicked(ImageFormat.PNG)
+                                onDismiss()
+                            }
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.menu_icon_exit),
+                                    contentDescription = null,
+                                    tint = Color.Unspecified
+                                )
+                                Text(
+                                    text = "PNG",
+                                    fontSize = 10.sp,
+                                    color = Color.Black,
+                                    modifier = Modifier.alpha(0.7f)
+                                )
+                            }
+                        }
+                    }
+                    //pdf save
+                    Box(
+                        modifier = Modifier
+                            .background(Color.White)
+                            .padding(horizontal = 10.dp)
+                    ) {
+                        IconButton(
+                            onClick = {
+                                onSaveClicked(ImageFormat.PDF)
+                                onDismiss()
+                            }
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.menu_icon_qr),
+                                    contentDescription = null,
+                                    tint = Color.Unspecified
+                                )
+                                Text(
+                                    text = "PDF",
+                                    fontSize = 10.sp,
+                                    color = Color.Black,
+                                    modifier = Modifier.alpha(0.7f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+            }
+            Canvas(
+                modifier = Modifier.size(width = 40.dp, height = 15.dp)
+            ) {
+                val path = Path()
+
+                path.moveTo(0f, 0f)
+                path.lineTo(20f, 15f)
+                path.lineTo(40f, 0f)
+
+                drawPath(
+                    path = path,
+                    color = Color.White,
+                )
+            }
+
+        }
+    }
 }
 
 @Composable

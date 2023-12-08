@@ -3,7 +3,6 @@ package com.example.drawingapp2.model
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -38,7 +37,10 @@ data class Page(
 
     // Calculate offsets for centering the table
     var centerX: Float = 0f,
-    var centerY: Float = 0f
+    var centerY: Float = 0f,
+
+    //for storable image from screenshot
+    var storableBitmap: Bitmap? = null,
 
 
-)
+    )

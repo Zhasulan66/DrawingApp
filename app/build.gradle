@@ -65,4 +65,5 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
 
     implementation 'com.godaddy.android.colorpicker:compose-color-picker:0.5.0'
+    implementation 'com.github.SmartToolFactory:Compose-Screenshot:1.0.3'
 }

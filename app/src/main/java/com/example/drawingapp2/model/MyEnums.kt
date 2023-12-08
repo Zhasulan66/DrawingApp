@@ -12,3 +12,7 @@ enum class LineType {
     ARROW,
     DASHED_ARROW
 }
+
+enum class ImageFormat {
+    JPEG, PNG, PDF
+}
